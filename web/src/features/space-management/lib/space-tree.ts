@@ -161,22 +161,9 @@ export function partitionNodes(nodes: SpaceNode[]): Record<SpaceSection, SpaceNo
 
 export type SpaceRow =
   | { type: "section"; id: string; section: SpaceSection; count: number; sizeBytes: number; collapsed: boolean }
-  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean; offsetBytes: number; edges: BarEdges }
+  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean }
 
-/** Which ends of a bar are outer ends and get rounded corners. */
-export interface BarEdges {
-  start: boolean
-  end: boolean
-}
-
-const OUTER_EDGES: BarEdges = { start: true, end: true }
-
-/**
- * Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons.
- * A child's offsetBytes is where its bar starts: the parent's offset plus the sizes of the
- * siblings above it, so the seasons' bars line up end to end under the series bar. Only the
- * first and last season round their outer end, so the run reads as one bar.
- */
+/** Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons. */
 export function flattenTree(
   sections: Record<SpaceSection, SpaceNode[]>,
   expanded: ReadonlySet<string>,
@@ -184,17 +171,12 @@ export function flattenTree(
 ): SpaceRow[] {
   const rows: SpaceRow[] = []
 
-  const pushNode = (node: SpaceNode, depth: number, offsetBytes: number, edges: BarEdges) => {
-    const children = node.children ?? []
-    const hasChildren = children.length > 0
+  const pushNode = (node: SpaceNode, depth: number) => {
+    const hasChildren = (node.children?.length ?? 0) > 0
     const isExpanded = hasChildren && expanded.has(node.id)
-    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded, offsetBytes, edges })
+    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded })
     if (isExpanded) {
-      let childOffset = offsetBytes
-      children.forEach((child, i) => {
-        pushNode(child, depth + 1, childOffset, { start: i === 0, end: i === children.length - 1 })
-        childOffset += child.sizeBytes
-      })
+      for (const child of node.children ?? []) pushNode(child, depth + 1)
     }
   }
 
@@ -211,7 +193,7 @@ export function flattenTree(
       collapsed,
     })
     if (!collapsed) {
-      for (const node of nodes) pushNode(node, 0, 0, OUTER_EDGES)
+      for (const node of nodes) pushNode(node, 0)
     }
   }
 
@@ -219,21 +201,41 @@ export function flattenTree(
 }
 
 export interface SizeBar {
-  /** Where the bar starts, in percent of the largest item. */
-  offsetPct: number
   /** Width of the whole bar, in percent of the largest item. */
   totalPct: number
   /** Width of the reclaimable part, in percent of the largest item. */
   reclaimablePct: number
 }
 
-/** Bar position and widths for a node next to the largest visible item, starting at offsetBytes. */
-export function sizeBar(node: SpaceNode, maxBytes: number, offsetBytes = 0): SizeBar {
-  if (maxBytes <= 0 || node.sizeBytes <= 0) return { offsetPct: 0, totalPct: 0, reclaimablePct: 0 }
-  const offsetPct = Math.min(100, (Math.max(0, offsetBytes) / maxBytes) * 100)
-  const totalPct = Math.min(100 - offsetPct, (node.sizeBytes / maxBytes) * 100)
+/** Bar widths for a node next to the largest visible item. */
+export function sizeBar(node: SpaceNode, maxBytes: number): SizeBar {
+  if (maxBytes <= 0 || node.sizeBytes <= 0) return { totalPct: 0, reclaimablePct: 0 }
+  const totalPct = Math.min(100, (node.sizeBytes / maxBytes) * 100)
   const reclaimable = Math.min(node.reclaimableBytes, node.sizeBytes)
-  return { offsetPct, totalPct, reclaimablePct: Math.min(totalPct, (Math.max(0, reclaimable) / maxBytes) * 100) }
+  return { totalPct, reclaimablePct: (Math.max(0, reclaimable) / maxBytes) * 100 }
+}
+
+export interface BarSegment {
+  node: SpaceNode
+  /** Width of the segment, in percent of the parent's bar. */
+  widthPct: number
+  /** Width of the reclaimable part, in percent of the segment. */
+  reclaimablePct: number
+}
+
+/**
+ * Splits a series bar into one segment per season, in display order. Segments share the bar in
+ * proportion to the seasons' sizes, so a file hardlinked into two seasons can't overflow it.
+ */
+export function barSegments(node: SpaceNode): BarSegment[] {
+  const children = (node.children ?? []).filter(child => child.sizeBytes > 0)
+  const total = children.reduce((sum, child) => sum + child.sizeBytes, 0)
+  if (total <= 0) return []
+  return children.map(child => ({
+    node: child,
+    widthPct: (child.sizeBytes / total) * 100,
+    reclaimablePct: (Math.min(Math.max(0, child.reclaimableBytes), child.sizeBytes) / child.sizeBytes) * 100,
+  }))
 }
 
 // Selection holds leaf ids only (seasons, movies, orphans, and a series without seasons).

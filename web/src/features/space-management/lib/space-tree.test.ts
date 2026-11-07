@@ -14,6 +14,7 @@ import {
   EMPTY_FILTER_INPUTS,
   EMPTY_SPACE_FILTERS,
   filterTree,
+  barSegments,
   flattenTree,
   formatDurationShort,
   nodeCheckState,
@@ -192,19 +193,6 @@ describe("flattenTree", () => {
     expect(rows.map(r => r.id)).toEqual(["section:library", "series", "s1", "s2", "movie", "section:orphans", "orphan"])
     const movieRow = rows[4]
     expect(movieRow.type === "node" && movieRow.expanded).toBe(false)
-    // Seasons start where the previous season ends; top-level rows start at zero.
-    const offsets = rows.flatMap(r => r.type === "node" ? [[r.id, r.offsetBytes]] : [])
-    const s1 = series.children![0]
-    expect(offsets).toEqual([["series", 0], ["s1", 0], ["s2", s1.sizeBytes], ["movie", 0], ["orphan", 0]])
-    // Only the outer ends of the season run are rounded; top-level bars round both ends.
-    const edges = rows.flatMap(r => r.type === "node" ? [[r.id, r.edges]] : [])
-    expect(edges).toEqual([
-      ["series", { start: true, end: true }],
-      ["s1", { start: true, end: false }],
-      ["s2", { start: false, end: true }],
-      ["movie", { start: true, end: true }],
-      ["orphan", { start: true, end: true }],
-    ])
   })
 
   it("hides the nodes of a collapsed section", () => {
@@ -215,12 +203,24 @@ describe("flattenTree", () => {
 
 describe("sizeBar", () => {
   it("sizes the bar to the largest item and the solid part to the reclaimable bytes", () => {
-    expect(sizeBar(movie, 1000)).toEqual({ offsetPct: 0, totalPct: 50, reclaimablePct: 10 })
-    expect(sizeBar(movie, 0)).toEqual({ offsetPct: 0, totalPct: 0, reclaimablePct: 0 })
-    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ offsetPct: 0, totalPct: 100, reclaimablePct: 100 })
-    // A bar that starts after its siblings is clamped to the end of the track.
-    expect(sizeBar(movie, 1000, 300)).toEqual({ offsetPct: 30, totalPct: 50, reclaimablePct: 10 })
-    expect(sizeBar(movie, 1000, 800)).toEqual({ offsetPct: 80, totalPct: 20, reclaimablePct: 10 })
+    expect(sizeBar(movie, 1000)).toEqual({ totalPct: 50, reclaimablePct: 10 })
+    expect(sizeBar(movie, 0)).toEqual({ totalPct: 0, reclaimablePct: 0 })
+    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ totalPct: 100, reclaimablePct: 100 })
+  })
+})
+
+describe("barSegments", () => {
+  it("splits a series bar by season size, in order, and skips empty seasons", () => {
+    const a = season("a", { sizeBytes: 300, reclaimableBytes: 150 })
+    const b = season("b", { sizeBytes: 100, reclaimableBytes: 500 })
+    const empty = season("empty")
+    const segments = barSegments(node("series", { kind: "series", sizeBytes: 380, children: [a, empty, b] }))
+    expect(segments.map(s => [s.node.id, s.widthPct, s.reclaimablePct])).toEqual([["a", 75, 50], ["b", 25, 100]])
+  })
+
+  it("returns no segments for a movie or a series without sized seasons", () => {
+    expect(barSegments(movie)).toEqual([])
+    expect(barSegments(node("series", { kind: "series", children: [season("empty")] }))).toEqual([])
   })
 })
 

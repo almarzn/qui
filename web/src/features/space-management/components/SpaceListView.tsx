@@ -8,12 +8,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn, formatBytes } from "@/lib/utils"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronRight } from "lucide-react"
-import { memo, useCallback, useRef } from "react"
+import { memo, useCallback, useRef, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SEEDING_COLORS, tint } from "../lib/colors"
 import {
-  type BarEdges,
+  barSegments,
   nodeCheckState,
   reclaimableDisplay,
   seedingState,
@@ -47,41 +47,63 @@ export interface SpaceListViewProps {
   onOpen: (node: SpaceNode) => void
 }
 
+/** One stretch of a bar: hatched where other links keep the data, solid where a delete frees it. */
+function BarFill({ color, reclaimablePct }: { color: string; reclaimablePct: number }) {
+  return (
+    <div
+      className="h-full min-w-px flex-1"
+      style={{
+        background: `repeating-linear-gradient(135deg, ${tint(color, 45)} 0 3px, ${tint(color, 15)} 3px 6px)`,
+      }}
+    >
+      <div className="h-full" style={{ width: `${reclaimablePct}%`, background: color }} />
+    </div>
+  )
+}
+
 interface SizeBarCellProps {
   node: SpaceNode
   maxBytes: number
-  offsetBytes: number
-  edges: BarEdges
+  nowMs: number
   color: string
 }
 
-function SizeBarCell({ node, maxBytes, offsetBytes, edges, color }: SizeBarCellProps) {
+/** A size bar; a series bar is split into one segment per season, each in its season's color. */
+function SizeBarCell({ node, maxBytes, nowMs, color }: SizeBarCellProps) {
   const { t } = useTranslation("spaceManagement")
-  const bar = sizeBar(node, maxBytes, offsetBytes)
-  const solidShare = bar.totalPct > 0 ? (bar.reclaimablePct / bar.totalPct) * 100 : 0
+  const bar = sizeBar(node, maxBytes)
+  const segments = barSegments(node)
   const display = reclaimableDisplay(node.reclaimableBytes, node.reclaimableKnown)
   const reclaimable = display.kind === "known"
     ? formatBytes(display.bytes)
     : display.kind === "atLeast" ? t("reclaimable.atLeast", { size: formatBytes(display.bytes) }) : t("reclaimable.unknown")
 
+  const track = (fill: ReactNode) => (
+    <div className="relative h-3 w-full overflow-hidden rounded-sm bg-muted/40">
+      <div className="flex h-full gap-px overflow-hidden rounded-sm" style={{ width: `${bar.totalPct}%` }}>
+        {fill}
+      </div>
+    </div>
+  )
+
+  if (segments.length > 0) {
+    return track(segments.map(segment => (
+      <Tooltip key={segment.node.id}>
+        <TooltipTrigger asChild>
+          <div className="flex h-full min-w-px" style={{ flex: `${segment.widthPct} 1 0` }}>
+            <BarFill color={SEEDING_COLORS[seedingState(segment.node, nowMs)]} reclaimablePct={segment.reclaimablePct} />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>{`${segment.node.title} · ${formatBytes(segment.node.sizeBytes)}`}</TooltipContent>
+      </Tooltip>
+    )))
+  }
+
+  const reclaimableShare = bar.totalPct > 0 ? (bar.reclaimablePct / bar.totalPct) * 100 : 0
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="relative h-3 w-full overflow-hidden rounded-sm bg-muted/40">
-          {/* Only outer ends are rounded, so the seasons of a series join into one bar. */}
-          <div
-            className={cn("absolute inset-y-0 overflow-hidden", edges.start && "rounded-l-sm", edges.end && "rounded-r-sm")}
-            style={{
-              left: `${bar.offsetPct}%`,
-              width: `${bar.totalPct}%`,
-              // Kept by other links: hatched and light.
-              background: `repeating-linear-gradient(135deg, ${tint(color, 45)} 0 3px, ${tint(color, 15)} 3px 6px)`,
-            }}
-          >
-            {/* Freed by a delete: solid. */}
-            <div className="h-full" style={{ width: `${solidShare}%`, background: color }} />
-          </div>
-        </div>
+        {track(<BarFill color={color} reclaimablePct={reclaimableShare} />)}
       </TooltipTrigger>
       <TooltipContent>{t("list.barTooltip", { reclaimable, size: formatBytes(node.sizeBytes) })}</TooltipContent>
     </Tooltip>
@@ -91,8 +113,6 @@ function SizeBarCell({ node, maxBytes, offsetBytes, edges, color }: SizeBarCellP
 interface NodeRowProps {
   node: SpaceNode
   depth: number
-  offsetBytes: number
-  edges: BarEdges
   hasChildren: boolean
   expanded: boolean
   checkState: SpaceCheckState
@@ -103,7 +123,7 @@ interface NodeRowProps {
   onOpen: (node: SpaceNode) => void
 }
 
-const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, edges, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
+const NodeRow = memo(function NodeRow({ node, depth, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
   const { t } = useTranslation("spaceManagement")
   const state = seedingState(node, nowMs)
 
@@ -144,7 +164,7 @@ const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, edges, hasChil
           {node.year ? <span className="text-muted-foreground"> {node.year}</span> : null}
         </button>
       </div>
-      <SizeBarCell node={node} maxBytes={maxBytes} offsetBytes={offsetBytes} edges={edges} color={SEEDING_COLORS[state]} />
+      <SizeBarCell node={node} maxBytes={maxBytes} nowMs={nowMs} color={SEEDING_COLORS[state]} />
       <div className="text-right text-xs tabular-nums">{formatBytes(node.sizeBytes)}</div>
       <div><SeedingBadge node={node} state={state} /></div>
       <div><CrossSeedBadge node={node} /></div>
@@ -216,8 +236,6 @@ export function SpaceListView({ rows, maxBytes, nowMs, selected, allCheckState, 
                 <NodeRow
                   node={row.node}
                   depth={row.depth}
-                  offsetBytes={row.offsetBytes}
-                  edges={row.edges}
                   hasChildren={row.hasChildren}
                   expanded={row.expanded}
                   checkState={nodeCheckState(row.node, selected)}
