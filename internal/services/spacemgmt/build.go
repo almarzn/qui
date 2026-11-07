@@ -457,20 +457,7 @@ func (s *Service) collectTorrents(ctx context.Context, qbits []*qbitSource, arrs
 		}
 		var instanceRefs []*fileRef
 		for _, t := range q.torrents {
-			e := &torrentEntry{instanceID: q.instance.ID, instanceName: q.instance.Name, torrent: t, contentPath: t.ContentPath}
-			if translated, ok := translatePath(t.ContentPath, mappings); ok {
-				e.contentPath = translated
-			}
-			files, ok := q.files[t.Hash]
-			if !ok {
-				files = q.files[strings.ToLower(t.Hash)]
-			}
-			for _, f := range files {
-				if f.Priority == 0 {
-					continue
-				}
-				e.files = append(e.files, fileRef{path: f.Name, size: f.Size})
-			}
+			e := newTorrentEntry(q, t, mappings)
 			for i := range e.files {
 				ref := &e.files[i]
 				raw, ok := joinTorrentPath(t.SavePath, ref.path)
@@ -491,7 +478,32 @@ func (s *Service) collectTorrents(ctx context.Context, qbits []*qbitSource, arrs
 		statRefs(ctx, q.backend, q.instance, instanceRefs)
 	}
 	statRefs(ctx, s.local, nil, localRefs)
+	s.retryInferred(ctx, arrs, entries, untranslated)
+	return entries
+}
 
+// newTorrentEntry lists the wanted files of t by name; collectTorrents turns
+// the names into paths.
+func newTorrentEntry(q *qbitSource, t qbt.Torrent, mappings []pathMapping) *torrentEntry {
+	e := &torrentEntry{instanceID: q.instance.ID, instanceName: q.instance.Name, torrent: t, contentPath: t.ContentPath}
+	if translated, ok := translatePath(t.ContentPath, mappings); ok {
+		e.contentPath = translated
+	}
+	files, ok := q.files[t.Hash]
+	if !ok {
+		files = q.files[strings.ToLower(t.Hash)]
+	}
+	for _, f := range files {
+		if f.Priority != 0 {
+			e.files = append(e.files, fileRef{path: f.Name, size: f.Size})
+		}
+	}
+	return e
+}
+
+// retryInferred reads the untranslated files that failed through the
+// prefixes inferred from import history.
+func (s *Service) retryInferred(ctx context.Context, arrs []*arrSource, entries []*torrentEntry, untranslated []torrentFileStat) {
 	var missing []torrentFileStat
 	for _, u := range untranslated {
 		if !u.entry.files[u.index].hasKey {
@@ -499,11 +511,11 @@ func (s *Service) collectTorrents(ctx context.Context, qbits []*qbitSource, arrs
 		}
 	}
 	if len(missing) == 0 {
-		return entries
+		return
 	}
 	inferred := inferMappings(historyPathPairs(arrs, entries))
 	if len(inferred) == 0 {
-		return entries
+		return
 	}
 	var retry []*fileRef
 	for _, m := range missing {
@@ -519,7 +531,6 @@ func (s *Service) collectTorrents(ctx context.Context, qbits []*qbitSource, arrs
 		}
 	}
 	statRefs(ctx, s.local, nil, retry)
-	return entries
 }
 
 func explicitMappings(arrs []*arrSource) []pathMapping {

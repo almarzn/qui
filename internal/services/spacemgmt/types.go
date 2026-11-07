@@ -114,7 +114,7 @@ type Stats struct {
 	Downloaded         int64   `json:"downloaded"`
 	Ratio              float64 `json:"ratio"`
 	SeedingTimeSeconds int64   `json:"seedingTimeSeconds"`
-	LastActivity       *string `json:"lastActivity"`
+	LastActivity       string  `json:"lastActivity,omitempty"`
 }
 
 // DeleteRequest is the body of POST /api/space/delete.

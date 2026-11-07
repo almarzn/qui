@@ -11015,7 +11015,7 @@ components:
 
     SpaceStats:
       type: object
-      required: [uploaded, downloaded, ratio, seedingTimeSeconds, lastActivity]
+      required: [uploaded, downloaded, ratio, seedingTimeSeconds]
       properties:
         uploaded:
           type: integer
@@ -11030,9 +11030,9 @@ components:
           format: int64
           description: Longest seeding time among the torrents
         lastActivity:
-          type: [string, 'null']
+          type: string
           format: date-time
-          description: Latest activity among the torrents, null without torrents
+          description: Latest activity among the torrents, omitted when unknown
 
     SpaceDeleteRequest:
       type: object

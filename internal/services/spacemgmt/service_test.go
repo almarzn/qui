@@ -95,7 +95,9 @@ func TestServiceBuildsTreeThroughRemotePathMapping(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		require.NoError(t, json.NewEncoder(w).Encode(body))
+		if err := json.NewEncoder(w).Encode(body); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer arr.Close()
 
