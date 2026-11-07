@@ -1,0 +1,129 @@
+{
+  "nav": "Space Management",
+  "page": {
+    "title": "Space Management",
+    "description": "See what your Sonarr and Radarr items take up on disk, how much deleting them frees, and which torrents seed them."
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "clearSelection": "Clear selection",
+    "refreshError": "Could not refresh: {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "Download",
+      "library": "Library"
+    },
+    "freeOf": "{{free}} free of {{total}}",
+    "used": "{{used}} used",
+    "tracked": "Tracked",
+    "reclaimable": "Reclaimable",
+    "orphanTorrents": "Orphan torrents",
+    "orphanFiles": "Orphan files",
+    "loadError": "Could not load disk usage: {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "Search titles…",
+    "ratioBelow": "Ratio below",
+    "seedingLongerThan": "Seeding for at least (days)",
+    "inactiveFor": "Inactive for at least (days)",
+    "sortBy": "Sort by",
+    "sortSize": "Size",
+    "sortReclaimable": "Reclaimable",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "reset": "Reset filters"
+  },
+  "columns": {
+    "title": "Title",
+    "instance": "Instance",
+    "quality": "Quality",
+    "added": "Added",
+    "size": "Size",
+    "reclaimable": "Reclaimable",
+    "uploaded": "Uploaded",
+    "downloaded": "Downloaded",
+    "ratio": "Ratio",
+    "seedingTime": "Seed time",
+    "lastActivity": "Last activity"
+  },
+  "sections": {
+    "library": "Library",
+    "orphans": "Orphans",
+    "summary": "Items: {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "Orphan torrent",
+    "orphanFile": "Orphan file"
+  },
+  "reclaimable": {
+    "unknown": "Unknown",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Some files could not be checked for hardlinks, so the real figure may be higher."
+  },
+  "details": {
+    "libraryPaths": "Library paths",
+    "downloadPaths": "Download paths",
+    "files": "Files",
+    "torrents": "Torrents",
+    "none": "None",
+    "path": "Path",
+    "links": "Links",
+    "linksUnknown": "Unknown",
+    "hardlinked": "Hardlinked",
+    "singleCopy": "Single copy",
+    "main": "Main",
+    "crossSeed": "Cross-seed",
+    "qbitInstance": "qBittorrent instance",
+    "tracker": "Tracker",
+    "name": "Name",
+    "state": "State",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "selection": {
+    "summary": "Selected: {{count}} · {{size}}",
+    "selectAll": "Select all visible items",
+    "selectRow": "Select {{title}}"
+  },
+  "status": {
+    "loadError": "Could not load the space tree: {{error}}",
+    "empty": "No Sonarr or Radarr items found.",
+    "noMatches": "No items match the filters.",
+    "generatedAt": "Built {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Delete selected items",
+    "description": "Items: {{count}}. Deleted data cannot be recovered.",
+    "optionTorrents": "Delete torrents + cross-seeds",
+    "optionTorrentsHelp": "Removes each torrent and all of its cross-seeds from qBittorrent, together with their data.",
+    "optionArrFiles": "Delete files in Sonarr/Radarr",
+    "optionArrFilesHelp": "Deletes the episode or movie files through Sonarr/Radarr, which removes the library copy.",
+    "chooseOption": "Choose at least one option.",
+    "planning": "Planning…",
+    "planError": "Could not plan the delete: {{error}}",
+    "reclaimable": "Space freed: {{size}}",
+    "noActions": "Nothing to delete with these options.",
+    "plannedActions": "Planned actions",
+    "results": "Results",
+    "confirm": "Delete",
+    "deleting": "Deleting…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "executeError": "Delete failed: {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "Delete torrent",
+    "deleteArrFile": "Delete library file",
+    "unknown": "Other action"
+  },
+  "actionStatus": {
+    "planned": "Planned",
+    "ok": "Done",
+    "error": "Failed",
+    "unknown": "Unknown"
+  }
+}

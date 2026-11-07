@@ -1,0 +1,129 @@
+{
+  "nav": "Gestion de l’espace",
+  "page": {
+    "title": "Gestion de l’espace",
+    "description": "Voyez l’espace disque occupé par vos éléments Sonarr et Radarr, ce que leur suppression libère et quels torrents les partagent."
+  },
+  "actions": {
+    "refresh": "Actualiser",
+    "delete": "Supprimer",
+    "clearSelection": "Vider la sélection",
+    "refreshError": "Échec de l’actualisation : {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "Téléchargement",
+      "library": "Bibliothèque"
+    },
+    "freeOf": "{{free}} libres sur {{total}}",
+    "used": "{{used}} utilisés",
+    "tracked": "Suivi",
+    "reclaimable": "Récupérable",
+    "orphanTorrents": "Torrents orphelins",
+    "orphanFiles": "Fichiers orphelins",
+    "loadError": "Impossible de charger l’utilisation du disque : {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher des titres…",
+    "ratioBelow": "Ratio inférieur à",
+    "seedingLongerThan": "En partage depuis au moins (jours)",
+    "inactiveFor": "Inactif depuis au moins (jours)",
+    "sortBy": "Trier par",
+    "sortSize": "Taille",
+    "sortReclaimable": "Récupérable",
+    "ascending": "Croissant",
+    "descending": "Décroissant",
+    "reset": "Réinitialiser les filtres"
+  },
+  "columns": {
+    "title": "Titre",
+    "instance": "Instance",
+    "quality": "Qualité",
+    "added": "Ajouté",
+    "size": "Taille",
+    "reclaimable": "Récupérable",
+    "uploaded": "Envoyé",
+    "downloaded": "Reçu",
+    "ratio": "Ratio",
+    "seedingTime": "Durée de partage",
+    "lastActivity": "Dernière activité"
+  },
+  "sections": {
+    "library": "Bibliothèque",
+    "orphans": "Orphelins",
+    "summary": "Éléments : {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "Torrent orphelin",
+    "orphanFile": "Fichier orphelin"
+  },
+  "reclaimable": {
+    "unknown": "Inconnu",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Certains fichiers n’ont pas pu être vérifiés pour les liens physiques, le chiffre réel peut être plus élevé."
+  },
+  "details": {
+    "libraryPaths": "Chemins de bibliothèque",
+    "downloadPaths": "Chemins de téléchargement",
+    "files": "Fichiers",
+    "torrents": "Torrents",
+    "none": "Aucun",
+    "path": "Chemin",
+    "links": "Liens",
+    "linksUnknown": "Inconnu",
+    "hardlinked": "Lien physique",
+    "singleCopy": "Copie unique",
+    "main": "Principal",
+    "crossSeed": "Cross-seed",
+    "qbitInstance": "Instance qBittorrent",
+    "tracker": "Tracker",
+    "name": "Nom",
+    "state": "État",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "expand": "Déplier",
+    "collapse": "Replier"
+  },
+  "selection": {
+    "summary": "Sélection : {{count}} · {{size}}",
+    "selectAll": "Sélectionner tous les éléments visibles",
+    "selectRow": "Sélectionner {{title}}"
+  },
+  "status": {
+    "loadError": "Impossible de charger l’arborescence : {{error}}",
+    "empty": "Aucun élément Sonarr ou Radarr trouvé.",
+    "noMatches": "Aucun élément ne correspond aux filtres.",
+    "generatedAt": "Généré {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Supprimer les éléments sélectionnés",
+    "description": "Éléments : {{count}}. Les données supprimées ne peuvent pas être récupérées.",
+    "optionTorrents": "Supprimer les torrents + cross-seeds",
+    "optionTorrentsHelp": "Retire chaque torrent et tous ses cross-seeds de qBittorrent, avec leurs données.",
+    "optionArrFiles": "Supprimer les fichiers dans Sonarr/Radarr",
+    "optionArrFilesHelp": "Supprime les fichiers d’épisode ou de film via Sonarr/Radarr, ce qui retire la copie de la bibliothèque.",
+    "chooseOption": "Choisissez au moins une option.",
+    "planning": "Planification…",
+    "planError": "Impossible de planifier la suppression : {{error}}",
+    "reclaimable": "Espace libéré : {{size}}",
+    "noActions": "Rien à supprimer avec ces options.",
+    "plannedActions": "Actions prévues",
+    "results": "Résultats",
+    "confirm": "Supprimer",
+    "deleting": "Suppression…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "executeError": "Échec de la suppression : {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "Supprimer le torrent",
+    "deleteArrFile": "Supprimer le fichier de bibliothèque",
+    "unknown": "Autre action"
+  },
+  "actionStatus": {
+    "planned": "Prévu",
+    "ok": "Terminé",
+    "error": "Échec",
+    "unknown": "Inconnu"
+  }
+}

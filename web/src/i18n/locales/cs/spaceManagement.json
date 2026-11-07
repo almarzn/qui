@@ -1,0 +1,129 @@
+{
+  "nav": "Správa místa",
+  "page": {
+    "title": "Správa místa",
+    "description": "Podívejte se, kolik místa na disku zabírají vaše položky ze Sonarr a Radarr, kolik uvolní jejich smazání a které torrenty je seedují."
+  },
+  "actions": {
+    "refresh": "Obnovit",
+    "delete": "Smazat",
+    "clearSelection": "Zrušit výběr",
+    "refreshError": "Obnovení se nezdařilo: {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "Stahování",
+      "library": "Knihovna"
+    },
+    "freeOf": "{{free}} volno z {{total}}",
+    "used": "{{used}} využito",
+    "tracked": "Sledováno",
+    "reclaimable": "Uvolnitelné",
+    "orphanTorrents": "Osiřelé torrenty",
+    "orphanFiles": "Osiřelé soubory",
+    "loadError": "Využití disku se nepodařilo načíst: {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "Hledat názvy…",
+    "ratioBelow": "Ratio pod",
+    "seedingLongerThan": "Seeduje alespoň (dny)",
+    "inactiveFor": "Neaktivní alespoň (dny)",
+    "sortBy": "Řadit podle",
+    "sortSize": "Velikost",
+    "sortReclaimable": "Uvolnitelné",
+    "ascending": "Vzestupně",
+    "descending": "Sestupně",
+    "reset": "Obnovit filtry"
+  },
+  "columns": {
+    "title": "Název",
+    "instance": "Instance",
+    "quality": "Kvalita",
+    "added": "Přidáno",
+    "size": "Velikost",
+    "reclaimable": "Uvolnitelné",
+    "uploaded": "Odesláno",
+    "downloaded": "Staženo",
+    "ratio": "Ratio",
+    "seedingTime": "Doba seedování",
+    "lastActivity": "Poslední aktivita"
+  },
+  "sections": {
+    "library": "Knihovna",
+    "orphans": "Osiřelé",
+    "summary": "Položky: {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "Osiřelý torrent",
+    "orphanFile": "Osiřelý soubor"
+  },
+  "reclaimable": {
+    "unknown": "Neznámé",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Některé soubory nebylo možné zkontrolovat na pevné odkazy, skutečná hodnota tedy může být vyšší."
+  },
+  "details": {
+    "libraryPaths": "Cesty v knihovně",
+    "downloadPaths": "Cesty stahování",
+    "files": "Soubory",
+    "torrents": "Torrenty",
+    "none": "Žádné",
+    "path": "Cesta",
+    "links": "Odkazy",
+    "linksUnknown": "Neznámé",
+    "hardlinked": "Pevný odkaz",
+    "singleCopy": "Jediná kopie",
+    "main": "Hlavní",
+    "crossSeed": "Cross-seed",
+    "qbitInstance": "Instance qBittorrent",
+    "tracker": "Tracker",
+    "name": "Název",
+    "state": "Stav",
+    "showDetails": "Zobrazit podrobnosti",
+    "hideDetails": "Skrýt podrobnosti",
+    "expand": "Rozbalit",
+    "collapse": "Sbalit"
+  },
+  "selection": {
+    "summary": "Vybráno: {{count}} · {{size}}",
+    "selectAll": "Vybrat všechny viditelné položky",
+    "selectRow": "Vybrat {{title}}"
+  },
+  "status": {
+    "loadError": "Strom místa se nepodařilo načíst: {{error}}",
+    "empty": "Nenalezeny žádné položky ze Sonarr ani Radarr.",
+    "noMatches": "Filtrům neodpovídají žádné položky.",
+    "generatedAt": "Sestaveno {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Smazat vybrané položky",
+    "description": "Položky: {{count}}. Smazaná data nelze obnovit.",
+    "optionTorrents": "Smazat torrenty + cross-seedy",
+    "optionTorrentsHelp": "Odebere každý torrent a všechny jeho cross-seedy z qBittorrentu i s jejich daty.",
+    "optionArrFiles": "Smazat soubory v Sonarr/Radarr",
+    "optionArrFilesHelp": "Smaže soubory epizod nebo filmu přes Sonarr/Radarr, čímž odstraní kopii v knihovně.",
+    "chooseOption": "Zvolte alespoň jednu možnost.",
+    "planning": "Plánování…",
+    "planError": "Smazání se nepodařilo naplánovat: {{error}}",
+    "reclaimable": "Uvolněné místo: {{size}}",
+    "noActions": "S těmito možnostmi není co smazat.",
+    "plannedActions": "Plánované akce",
+    "results": "Výsledky",
+    "confirm": "Smazat",
+    "deleting": "Mazání…",
+    "cancel": "Zrušit",
+    "close": "Zavřít",
+    "executeError": "Smazání se nezdařilo: {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "Smazat torrent",
+    "deleteArrFile": "Smazat soubor knihovny",
+    "unknown": "Jiná akce"
+  },
+  "actionStatus": {
+    "planned": "Naplánováno",
+    "ok": "Hotovo",
+    "error": "Selhalo",
+    "unknown": "Neznámé"
+  }
+}

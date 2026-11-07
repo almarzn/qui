@@ -1,0 +1,129 @@
+{
+  "nav": "Gestione spazio",
+  "page": {
+    "title": "Gestione spazio",
+    "description": "Scopri quanto spazio occupano i tuoi elementi Sonarr e Radarr, quanto ne libera l’eliminazione e quali torrent li condividono."
+  },
+  "actions": {
+    "refresh": "Aggiorna",
+    "delete": "Elimina",
+    "clearSelection": "Annulla selezione",
+    "refreshError": "Aggiornamento non riuscito: {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "Download",
+      "library": "Libreria"
+    },
+    "freeOf": "{{free}} liberi su {{total}}",
+    "used": "{{used}} usati",
+    "tracked": "Monitorato",
+    "reclaimable": "Recuperabile",
+    "orphanTorrents": "Torrent orfani",
+    "orphanFiles": "File orfani",
+    "loadError": "Impossibile caricare l’uso del disco: {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "Cerca titoli…",
+    "ratioBelow": "Ratio inferiore a",
+    "seedingLongerThan": "In seed da almeno (giorni)",
+    "inactiveFor": "Inattivo da almeno (giorni)",
+    "sortBy": "Ordina per",
+    "sortSize": "Dimensione",
+    "sortReclaimable": "Recuperabile",
+    "ascending": "Crescente",
+    "descending": "Decrescente",
+    "reset": "Reimposta filtri"
+  },
+  "columns": {
+    "title": "Titolo",
+    "instance": "Istanza",
+    "quality": "Qualità",
+    "added": "Aggiunto",
+    "size": "Dimensione",
+    "reclaimable": "Recuperabile",
+    "uploaded": "Caricato",
+    "downloaded": "Scaricato",
+    "ratio": "Ratio",
+    "seedingTime": "Tempo di seed",
+    "lastActivity": "Ultima attività"
+  },
+  "sections": {
+    "library": "Libreria",
+    "orphans": "Orfani",
+    "summary": "Elementi: {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "Torrent orfano",
+    "orphanFile": "File orfano"
+  },
+  "reclaimable": {
+    "unknown": "Sconosciuto",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Alcuni file non sono stati controllati per gli hardlink, quindi il valore reale potrebbe essere più alto."
+  },
+  "details": {
+    "libraryPaths": "Percorsi libreria",
+    "downloadPaths": "Percorsi download",
+    "files": "File",
+    "torrents": "Torrent",
+    "none": "Nessuno",
+    "path": "Percorso",
+    "links": "Collegamenti",
+    "linksUnknown": "Sconosciuto",
+    "hardlinked": "Hardlink",
+    "singleCopy": "Copia singola",
+    "main": "Principale",
+    "crossSeed": "Cross-seed",
+    "qbitInstance": "Istanza qBittorrent",
+    "tracker": "Tracker",
+    "name": "Nome",
+    "state": "Stato",
+    "showDetails": "Mostra dettagli",
+    "hideDetails": "Nascondi dettagli",
+    "expand": "Espandi",
+    "collapse": "Comprimi"
+  },
+  "selection": {
+    "summary": "Selezionati: {{count}} · {{size}}",
+    "selectAll": "Seleziona tutti gli elementi visibili",
+    "selectRow": "Seleziona {{title}}"
+  },
+  "status": {
+    "loadError": "Impossibile caricare l’albero dello spazio: {{error}}",
+    "empty": "Nessun elemento Sonarr o Radarr trovato.",
+    "noMatches": "Nessun elemento corrisponde ai filtri.",
+    "generatedAt": "Generato {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Elimina gli elementi selezionati",
+    "description": "Elementi: {{count}}. I dati eliminati non possono essere recuperati.",
+    "optionTorrents": "Elimina torrent + cross-seed",
+    "optionTorrentsHelp": "Rimuove ogni torrent e tutti i suoi cross-seed da qBittorrent, insieme ai loro dati.",
+    "optionArrFiles": "Elimina i file in Sonarr/Radarr",
+    "optionArrFilesHelp": "Elimina i file degli episodi o del film tramite Sonarr/Radarr, rimuovendo la copia in libreria.",
+    "chooseOption": "Scegli almeno un’opzione.",
+    "planning": "Pianificazione…",
+    "planError": "Impossibile pianificare l’eliminazione: {{error}}",
+    "reclaimable": "Spazio liberato: {{size}}",
+    "noActions": "Niente da eliminare con queste opzioni.",
+    "plannedActions": "Azioni previste",
+    "results": "Risultati",
+    "confirm": "Elimina",
+    "deleting": "Eliminazione…",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "executeError": "Eliminazione non riuscita: {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "Elimina torrent",
+    "deleteArrFile": "Elimina file di libreria",
+    "unknown": "Altra azione"
+  },
+  "actionStatus": {
+    "planned": "Previsto",
+    "ok": "Fatto",
+    "error": "Non riuscito",
+    "unknown": "Sconosciuto"
+  }
+}

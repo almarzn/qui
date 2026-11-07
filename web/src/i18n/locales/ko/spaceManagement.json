@@ -1,0 +1,129 @@
+{
+  "nav": "공간 관리",
+  "page": {
+    "title": "공간 관리",
+    "description": "Sonarr와 Radarr 항목이 디스크에서 차지하는 공간, 삭제 시 확보되는 공간, 그리고 이를 시딩하는 토렌트를 확인합니다."
+  },
+  "actions": {
+    "refresh": "새로 고침",
+    "delete": "삭제",
+    "clearSelection": "선택 해제",
+    "refreshError": "새로 고칠 수 없습니다: {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "다운로드",
+      "library": "라이브러리"
+    },
+    "freeOf": "{{total}} 중 {{free}} 사용 가능",
+    "used": "{{used}} 사용 중",
+    "tracked": "추적됨",
+    "reclaimable": "확보 가능",
+    "orphanTorrents": "고아 토렌트",
+    "orphanFiles": "고아 파일",
+    "loadError": "디스크 사용량을 불러올 수 없습니다: {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "제목 검색…",
+    "ratioBelow": "비율 미만",
+    "seedingLongerThan": "최소 시딩 기간(일)",
+    "inactiveFor": "최소 비활성 기간(일)",
+    "sortBy": "정렬 기준",
+    "sortSize": "크기",
+    "sortReclaimable": "확보 가능",
+    "ascending": "오름차순",
+    "descending": "내림차순",
+    "reset": "필터 초기화"
+  },
+  "columns": {
+    "title": "제목",
+    "instance": "인스턴스",
+    "quality": "품질",
+    "added": "추가됨",
+    "size": "크기",
+    "reclaimable": "확보 가능",
+    "uploaded": "업로드",
+    "downloaded": "다운로드",
+    "ratio": "비율",
+    "seedingTime": "시딩 시간",
+    "lastActivity": "마지막 활동"
+  },
+  "sections": {
+    "library": "라이브러리",
+    "orphans": "고아 항목",
+    "summary": "항목: {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "고아 토렌트",
+    "orphanFile": "고아 파일"
+  },
+  "reclaimable": {
+    "unknown": "알 수 없음",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "일부 파일의 하드링크를 확인할 수 없어 실제 값은 더 클 수 있습니다."
+  },
+  "details": {
+    "libraryPaths": "라이브러리 경로",
+    "downloadPaths": "다운로드 경로",
+    "files": "파일",
+    "torrents": "토렌트",
+    "none": "없음",
+    "path": "경로",
+    "links": "링크",
+    "linksUnknown": "알 수 없음",
+    "hardlinked": "하드링크",
+    "singleCopy": "단일 사본",
+    "main": "기본",
+    "crossSeed": "크로스 시드",
+    "qbitInstance": "qBittorrent 인스턴스",
+    "tracker": "트래커",
+    "name": "이름",
+    "state": "상태",
+    "showDetails": "세부 정보 표시",
+    "hideDetails": "세부 정보 숨기기",
+    "expand": "펼치기",
+    "collapse": "접기"
+  },
+  "selection": {
+    "summary": "선택됨: {{count}} · {{size}}",
+    "selectAll": "보이는 항목 모두 선택",
+    "selectRow": "{{title}} 선택"
+  },
+  "status": {
+    "loadError": "공간 트리를 불러올 수 없습니다: {{error}}",
+    "empty": "Sonarr 또는 Radarr 항목이 없습니다.",
+    "noMatches": "필터와 일치하는 항목이 없습니다.",
+    "generatedAt": "생성 시각 {{time}}"
+  },
+  "deleteDialog": {
+    "title": "선택한 항목 삭제",
+    "description": "항목: {{count}}. 삭제된 데이터는 복구할 수 없습니다.",
+    "optionTorrents": "토렌트 + 크로스 시드 삭제",
+    "optionTorrentsHelp": "각 토렌트와 그 크로스 시드를 모두 데이터와 함께 qBittorrent에서 제거합니다.",
+    "optionArrFiles": "Sonarr/Radarr에서 파일 삭제",
+    "optionArrFilesHelp": "Sonarr/Radarr를 통해 에피소드 또는 영화 파일을 삭제하여 라이브러리 사본을 제거합니다.",
+    "chooseOption": "옵션을 하나 이상 선택하세요.",
+    "planning": "계획 중…",
+    "planError": "삭제를 계획할 수 없습니다: {{error}}",
+    "reclaimable": "확보되는 공간: {{size}}",
+    "noActions": "이 옵션으로는 삭제할 항목이 없습니다.",
+    "plannedActions": "계획된 작업",
+    "results": "결과",
+    "confirm": "삭제",
+    "deleting": "삭제 중…",
+    "cancel": "취소",
+    "close": "닫기",
+    "executeError": "삭제 실패: {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "토렌트 삭제",
+    "deleteArrFile": "라이브러리 파일 삭제",
+    "unknown": "기타 작업"
+  },
+  "actionStatus": {
+    "planned": "계획됨",
+    "ok": "완료",
+    "error": "실패",
+    "unknown": "알 수 없음"
+  }
+}
