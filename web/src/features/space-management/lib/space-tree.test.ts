@@ -14,7 +14,6 @@ import {
   EMPTY_FILTER_INPUTS,
   EMPTY_SPACE_FILTERS,
   filterTree,
-  barSegments,
   flattenTree,
   formatDurationShort,
   nodeCheckState,
@@ -206,21 +205,6 @@ describe("sizeBar", () => {
     expect(sizeBar(movie, 1000)).toEqual({ totalPct: 50, reclaimablePct: 10 })
     expect(sizeBar(movie, 0)).toEqual({ totalPct: 0, reclaimablePct: 0 })
     expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ totalPct: 100, reclaimablePct: 100 })
-  })
-})
-
-describe("barSegments", () => {
-  it("splits a series bar by season size, in order, and skips empty seasons", () => {
-    const a = season("a", { sizeBytes: 300, reclaimableBytes: 150 })
-    const b = season("b", { sizeBytes: 100, reclaimableBytes: 500 })
-    const empty = season("empty")
-    const segments = barSegments(node("series", { kind: "series", sizeBytes: 380, children: [a, empty, b] }))
-    expect(segments.map(s => [s.node.id, s.widthPct, s.reclaimablePct])).toEqual([["a", 75, 50], ["b", 25, 100]])
-  })
-
-  it("returns no segments for a movie or a series without sized seasons", () => {
-    expect(barSegments(movie)).toEqual([])
-    expect(barSegments(node("series", { kind: "series", children: [season("empty")] }))).toEqual([])
   })
 })
 

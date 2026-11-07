@@ -215,29 +215,6 @@ export function sizeBar(node: SpaceNode, maxBytes: number): SizeBar {
   return { totalPct, reclaimablePct: (Math.max(0, reclaimable) / maxBytes) * 100 }
 }
 
-export interface BarSegment {
-  node: SpaceNode
-  /** Width of the segment, in percent of the parent's bar. */
-  widthPct: number
-  /** Width of the reclaimable part, in percent of the segment. */
-  reclaimablePct: number
-}
-
-/**
- * Splits a series bar into one segment per season, in display order. Segments share the bar in
- * proportion to the seasons' sizes, so a file hardlinked into two seasons can't overflow it.
- */
-export function barSegments(node: SpaceNode): BarSegment[] {
-  const children = (node.children ?? []).filter(child => child.sizeBytes > 0)
-  const total = children.reduce((sum, child) => sum + child.sizeBytes, 0)
-  if (total <= 0) return []
-  return children.map(child => ({
-    node: child,
-    widthPct: (child.sizeBytes / total) * 100,
-    reclaimablePct: (Math.min(Math.max(0, child.reclaimableBytes), child.sizeBytes) / child.sizeBytes) * 100,
-  }))
-}
-
 // Selection holds leaf ids only (seasons, movies, orphans, and a series without seasons).
 // A parent's checkbox is derived from its visible children.
 
