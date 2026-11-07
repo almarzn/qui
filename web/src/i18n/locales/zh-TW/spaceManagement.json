@@ -1,0 +1,149 @@
+{
+  "nav": "空間管理",
+  "page": {
+    "title": "空間管理",
+    "description": "查看 Sonarr 與 Radarr 項目佔用的磁碟空間、刪除後可釋放的空間，以及為其做種的種子。"
+  },
+  "actions": {
+    "refresh": "重新整理",
+    "delete": "刪除",
+    "clearSelection": "清除選取",
+    "refreshError": "無法重新整理：{{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "做種中的項目",
+      "notSeeded": "未做種",
+      "orphanTorrents": "孤立種子",
+      "otherUsed": "其他佔用",
+      "free": "可用"
+    },
+    "segmentTooltip": "{{label}}：{{size}}",
+    "summary": "已追蹤 {{tracked}} · 可用 {{free}} · 可釋放 {{reclaimable}}",
+    "ariaLabel": "磁碟使用量：已用 {{used}}，共 {{total}}",
+    "loadError": "無法載入磁碟使用量：{{error}}"
+  },
+  "filters": {
+    "quickLabel": "快速篩選",
+    "quick": {
+      "all": "全部",
+      "lowRatio": "低分享率（<1）",
+      "inactive": "30 天無活動",
+      "notSeeded": "未做種"
+    },
+    "more": "更多篩選",
+    "searchPlaceholder": "搜尋標題…",
+    "ratioBelow": "分享率低於",
+    "seedingLongerThan": "做種至少（天）",
+    "inactiveFor": "無活動至少（天）",
+    "sortBy": "排序方式",
+    "sortSize": "大小",
+    "sortReclaimable": "可釋放",
+    "ascending": "遞增",
+    "descending": "遞減"
+  },
+  "view": {
+    "label": "檢視",
+    "list": "清單",
+    "treemap": "矩形樹狀圖"
+  },
+  "list": {
+    "title": "標題",
+    "space": "空間（實色部分刪除後釋放）",
+    "size": "大小",
+    "seeding": "做種",
+    "barTooltip": "釋放 {{reclaimable}}，共 {{size}}",
+    "expand": "展開",
+    "collapse": "收合"
+  },
+  "treemap": {
+    "breadcrumb": "樹狀圖層級",
+    "all": "全部項目",
+    "seriesDetails": "詳細資料",
+    "zoomInto": "顯示 {{title}} 的各季",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "點擊影集查看各季，點擊其他項目查看詳細資料。按住 Shift 點擊或勾選核取方塊進行選取。"
+  },
+  "sections": {
+    "library": "媒體庫",
+    "orphans": "孤立項目",
+    "summary": "項目：{{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "未知",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "部分檔案無法檢查硬連結，實際數值可能更高。"
+  },
+  "seeding": {
+    "states": {
+      "healthy": "做種中",
+      "lowRatio": "低分享率",
+      "inactive": "無活動",
+      "notSeeded": "未做種"
+    },
+    "ratio": "分享率 {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "已做種 {{time}}",
+    "lastActivity": "最後活動 {{time}}",
+    "noActivity": "無活動記錄",
+    "crossSeeds": "輔種：{{total}}"
+  },
+  "details": {
+    "size": "大小",
+    "reclaimable": "可釋放",
+    "ratio": "分享率",
+    "uploaded": "已上傳",
+    "downloaded": "已下載",
+    "seedTime": "做種時間",
+    "lastActivity": "最後活動",
+    "added": "新增日期",
+    "libraryPaths": "媒體庫路徑",
+    "downloadPaths": "下載路徑",
+    "files": "檔案",
+    "torrents": "種子",
+    "none": "無",
+    "links": "連結數：{{links}}",
+    "linksUnknown": "連結數：？",
+    "hardlinked": "硬連結",
+    "singleCopy": "單一副本",
+    "main": "主種",
+    "crossSeed": "輔種"
+  },
+  "selection": {
+    "summary": "已選取：{{items}} · {{size}}",
+    "selectAll": "選取所有可見項目",
+    "selectRow": "選取 {{title}}"
+  },
+  "status": {
+    "loadError": "無法載入空間樹：{{error}}",
+    "empty": "找不到 Sonarr 或 Radarr 項目。",
+    "noMatches": "沒有項目符合篩選條件。",
+    "generatedAt": "產生於 {{time}}"
+  },
+  "deleteDialog": {
+    "title": "刪除選取的項目",
+    "description": "項目：{{items}}。刪除的資料無法復原。",
+    "optionTorrents": "刪除種子 + 輔種",
+    "optionTorrentsHelp": "從 qBittorrent 移除每個種子及其所有輔種，並刪除其資料。",
+    "optionArrFiles": "在 Sonarr/Radarr 中刪除檔案",
+    "optionArrFilesHelp": "透過 Sonarr/Radarr 刪除劇集或電影檔案，從而移除媒體庫中的副本。",
+    "chooseOption": "請至少選擇一個選項。",
+    "planning": "正在規劃…",
+    "planError": "無法規劃刪除：{{error}}",
+    "reclaimable": "釋放空間：{{size}}",
+    "noActions": "使用這些選項沒有可刪除的內容。",
+    "plannedActions": "計畫的操作",
+    "results": "結果",
+    "confirm": "刪除",
+    "deleting": "正在刪除…",
+    "cancel": "取消",
+    "close": "關閉",
+    "executeError": "刪除失敗：{{error}}"
+  },
+  "actionStatus": {
+    "planned": "已計畫",
+    "ok": "已完成",
+    "error": "失敗",
+    "unknown": "未知"
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "nav": "空间管理",
+  "page": {
+    "title": "空间管理",
+    "description": "查看 Sonarr 和 Radarr 条目占用的磁盘空间、删除后可释放的空间，以及为其做种的种子。"
+  },
+  "actions": {
+    "refresh": "刷新",
+    "delete": "删除",
+    "clearSelection": "清除选择",
+    "refreshError": "无法刷新：{{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "做种中的条目",
+      "notSeeded": "未做种",
+      "orphanTorrents": "孤立种子",
+      "otherUsed": "其他占用",
+      "free": "可用"
+    },
+    "segmentTooltip": "{{label}}：{{size}}",
+    "summary": "已跟踪 {{tracked}} · 可用 {{free}} · 可释放 {{reclaimable}}",
+    "ariaLabel": "磁盘使用：已用 {{used}}，共 {{total}}",
+    "loadError": "无法加载磁盘使用情况：{{error}}"
+  },
+  "filters": {
+    "quickLabel": "快速筛选",
+    "quick": {
+      "all": "全部",
+      "lowRatio": "低分享率（<1）",
+      "inactive": "30 天无活动",
+      "notSeeded": "未做种"
+    },
+    "more": "更多筛选",
+    "searchPlaceholder": "搜索标题…",
+    "ratioBelow": "分享率低于",
+    "seedingLongerThan": "做种至少（天）",
+    "inactiveFor": "无活动至少（天）",
+    "sortBy": "排序方式",
+    "sortSize": "大小",
+    "sortReclaimable": "可释放",
+    "ascending": "升序",
+    "descending": "降序"
+  },
+  "view": {
+    "label": "视图",
+    "list": "列表",
+    "treemap": "矩形树图"
+  },
+  "list": {
+    "title": "标题",
+    "space": "空间（实色部分删除后释放）",
+    "size": "大小",
+    "seeding": "做种",
+    "barTooltip": "释放 {{reclaimable}}，共 {{size}}",
+    "expand": "展开",
+    "collapse": "折叠"
+  },
+  "treemap": {
+    "breadcrumb": "树图层级",
+    "all": "全部条目",
+    "seriesDetails": "详情",
+    "zoomInto": "显示 {{title}} 的各季",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "点击剧集查看各季，点击其他条目查看详情。按住 Shift 点击或勾选复选框进行选择。"
+  },
+  "sections": {
+    "library": "媒体库",
+    "orphans": "孤立项",
+    "summary": "条目：{{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "未知",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "部分文件无法检查硬链接，实际数值可能更高。"
+  },
+  "seeding": {
+    "states": {
+      "healthy": "做种中",
+      "lowRatio": "低分享率",
+      "inactive": "无活动",
+      "notSeeded": "未做种"
+    },
+    "ratio": "分享率 {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "已做种 {{time}}",
+    "lastActivity": "最后活动 {{time}}",
+    "noActivity": "无活动记录",
+    "crossSeeds": "辅种：{{total}}"
+  },
+  "details": {
+    "size": "大小",
+    "reclaimable": "可释放",
+    "ratio": "分享率",
+    "uploaded": "已上传",
+    "downloaded": "已下载",
+    "seedTime": "做种时间",
+    "lastActivity": "最后活动",
+    "added": "添加日期",
+    "libraryPaths": "媒体库路径",
+    "downloadPaths": "下载路径",
+    "files": "文件",
+    "torrents": "种子",
+    "none": "无",
+    "links": "链接数：{{links}}",
+    "linksUnknown": "链接数：？",
+    "hardlinked": "硬链接",
+    "singleCopy": "单一副本",
+    "main": "主种",
+    "crossSeed": "辅种"
+  },
+  "selection": {
+    "summary": "已选：{{items}} · {{size}}",
+    "selectAll": "选择所有可见条目",
+    "selectRow": "选择 {{title}}"
+  },
+  "status": {
+    "loadError": "无法加载空间树：{{error}}",
+    "empty": "未找到 Sonarr 或 Radarr 条目。",
+    "noMatches": "没有条目符合筛选条件。",
+    "generatedAt": "生成于 {{time}}"
+  },
+  "deleteDialog": {
+    "title": "删除所选条目",
+    "description": "条目：{{items}}。删除的数据无法恢复。",
+    "optionTorrents": "删除种子 + 辅种",
+    "optionTorrentsHelp": "从 qBittorrent 中移除每个种子及其所有辅种，并删除其数据。",
+    "optionArrFiles": "在 Sonarr/Radarr 中删除文件",
+    "optionArrFilesHelp": "通过 Sonarr/Radarr 删除剧集或电影文件，从而移除媒体库中的副本。",
+    "chooseOption": "请至少选择一个选项。",
+    "planning": "正在规划…",
+    "planError": "无法规划删除：{{error}}",
+    "reclaimable": "释放空间：{{size}}",
+    "noActions": "使用这些选项没有可删除的内容。",
+    "plannedActions": "计划的操作",
+    "results": "结果",
+    "confirm": "删除",
+    "deleting": "正在删除…",
+    "cancel": "取消",
+    "close": "关闭",
+    "executeError": "删除失败：{{error}}"
+  },
+  "actionStatus": {
+    "planned": "已计划",
+    "ok": "已完成",
+    "error": "失败",
+    "unknown": "未知"
+  }
+}

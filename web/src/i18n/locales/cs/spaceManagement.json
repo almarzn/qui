@@ -1,0 +1,149 @@
+{
+  "nav": "Správa místa",
+  "page": {
+    "title": "Správa místa",
+    "description": "Podívejte se, kolik místa na disku zabírají vaše položky ze Sonarr a Radarr, kolik uvolní jejich smazání a které torrenty je seedují."
+  },
+  "actions": {
+    "refresh": "Obnovit",
+    "delete": "Smazat",
+    "clearSelection": "Zrušit výběr",
+    "refreshError": "Obnovení se nezdařilo: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Seedované položky",
+      "notSeeded": "Neseedováno",
+      "orphanTorrents": "Osiřelé torrenty",
+      "otherUsed": "Ostatní využití",
+      "free": "Volno"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} sledováno · {{free}} volno · {{reclaimable}} uvolnitelné",
+    "ariaLabel": "Využití disku: {{used}} z {{total}}",
+    "loadError": "Využití disku se nepodařilo načíst: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Rychlé filtry",
+    "quick": {
+      "all": "Vše",
+      "lowRatio": "Nízké ratio (<1)",
+      "inactive": "Neaktivní 30 d",
+      "notSeeded": "Neseedováno"
+    },
+    "more": "Další filtry",
+    "searchPlaceholder": "Hledat názvy…",
+    "ratioBelow": "Ratio pod",
+    "seedingLongerThan": "Seeduje alespoň (dny)",
+    "inactiveFor": "Neaktivní alespoň (dny)",
+    "sortBy": "Řadit podle",
+    "sortSize": "Velikost",
+    "sortReclaimable": "Uvolnitelné",
+    "ascending": "Vzestupně",
+    "descending": "Sestupně"
+  },
+  "view": {
+    "label": "Zobrazení",
+    "list": "Seznam",
+    "treemap": "Stromová mapa"
+  },
+  "list": {
+    "title": "Název",
+    "space": "Místo (plná část se smazáním uvolní)",
+    "size": "Velikost",
+    "seeding": "Seedování",
+    "barTooltip": "Uvolní {{reclaimable}} z {{size}}",
+    "expand": "Rozbalit",
+    "collapse": "Sbalit"
+  },
+  "treemap": {
+    "breadcrumb": "Úroveň mapy",
+    "all": "Všechny položky",
+    "seriesDetails": "Podrobnosti",
+    "zoomInto": "Zobrazit řady {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Klikněte na seriál pro jeho řady, nebo na cokoli jiného pro podrobnosti. Shift-klik nebo zaškrtávací pole vybírá."
+  },
+  "sections": {
+    "library": "Knihovna",
+    "orphans": "Osiřelé",
+    "summary": "Položky: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Neznámé",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Některé soubory nebylo možné zkontrolovat na pevné odkazy, skutečná hodnota tedy může být vyšší."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Seeduje",
+      "lowRatio": "Nízké ratio",
+      "inactive": "Neaktivní",
+      "notSeeded": "Neseedováno"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Seeduje {{time}}",
+    "lastActivity": "Poslední aktivita {{time}}",
+    "noActivity": "Žádná zaznamenaná aktivita",
+    "crossSeeds": "Cross-seedy: {{total}}"
+  },
+  "details": {
+    "size": "Velikost",
+    "reclaimable": "Uvolnitelné",
+    "ratio": "Ratio",
+    "uploaded": "Odesláno",
+    "downloaded": "Staženo",
+    "seedTime": "Doba seedování",
+    "lastActivity": "Poslední aktivita",
+    "added": "Přidáno",
+    "libraryPaths": "Cesty v knihovně",
+    "downloadPaths": "Cesty stahování",
+    "files": "Soubory",
+    "torrents": "Torrenty",
+    "none": "Žádné",
+    "links": "Odkazy: {{links}}",
+    "linksUnknown": "Odkazy: ?",
+    "hardlinked": "Pevný odkaz",
+    "singleCopy": "Jediná kopie",
+    "main": "Hlavní",
+    "crossSeed": "Cross-seed"
+  },
+  "selection": {
+    "summary": "Vybráno: {{items}} · {{size}}",
+    "selectAll": "Vybrat všechny viditelné položky",
+    "selectRow": "Vybrat {{title}}"
+  },
+  "status": {
+    "loadError": "Strom místa se nepodařilo načíst: {{error}}",
+    "empty": "Nenalezeny žádné položky ze Sonarr ani Radarr.",
+    "noMatches": "Filtrům neodpovídají žádné položky.",
+    "generatedAt": "Sestaveno {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Smazat vybrané položky",
+    "description": "Položky: {{items}}. Smazaná data nelze obnovit.",
+    "optionTorrents": "Smazat torrenty + cross-seedy",
+    "optionTorrentsHelp": "Odebere každý torrent a všechny jeho cross-seedy z qBittorrentu i s jejich daty.",
+    "optionArrFiles": "Smazat soubory v Sonarr/Radarr",
+    "optionArrFilesHelp": "Smaže soubory epizod nebo filmu přes Sonarr/Radarr, čímž odstraní kopii v knihovně.",
+    "chooseOption": "Zvolte alespoň jednu možnost.",
+    "planning": "Plánování…",
+    "planError": "Smazání se nepodařilo naplánovat: {{error}}",
+    "reclaimable": "Uvolněné místo: {{size}}",
+    "noActions": "S těmito možnostmi není co smazat.",
+    "plannedActions": "Plánované akce",
+    "results": "Výsledky",
+    "confirm": "Smazat",
+    "deleting": "Mazání…",
+    "cancel": "Zrušit",
+    "close": "Zavřít",
+    "executeError": "Smazání se nezdařilo: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Naplánováno",
+    "ok": "Hotovo",
+    "error": "Selhalo",
+    "unknown": "Neznámé"
+  }
+}

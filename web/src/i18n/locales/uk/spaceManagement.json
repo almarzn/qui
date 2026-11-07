@@ -1,0 +1,149 @@
+{
+  "nav": "Керування місцем",
+  "page": {
+    "title": "Керування місцем",
+    "description": "Дивіться, скільки місця на диску займають ваші елементи Sonarr і Radarr, скільки звільнить їх видалення і які торенти їх роздають."
+  },
+  "actions": {
+    "refresh": "Оновити",
+    "delete": "Видалити",
+    "clearSelection": "Скасувати вибір",
+    "refreshError": "Не вдалося оновити: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Елементи, що роздаються",
+      "notSeeded": "Не роздається",
+      "orphanTorrents": "Осиротілі торенти",
+      "otherUsed": "Інше зайняте",
+      "free": "Вільно"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} відстежується · {{free}} вільно · {{reclaimable}} можна звільнити",
+    "ariaLabel": "Використання диска: зайнято {{used}} з {{total}}",
+    "loadError": "Не вдалося завантажити використання диска: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Швидкі фільтри",
+    "quick": {
+      "all": "Усі",
+      "lowRatio": "Низький рейтинг (<1)",
+      "inactive": "Неактивні 30 дн.",
+      "notSeeded": "Не роздаються"
+    },
+    "more": "Більше фільтрів",
+    "searchPlaceholder": "Пошук назв…",
+    "ratioBelow": "Рейтинг нижче",
+    "seedingLongerThan": "Роздається щонайменше (днів)",
+    "inactiveFor": "Неактивний щонайменше (днів)",
+    "sortBy": "Сортувати за",
+    "sortSize": "Розмір",
+    "sortReclaimable": "Можна звільнити",
+    "ascending": "За зростанням",
+    "descending": "За спаданням"
+  },
+  "view": {
+    "label": "Вигляд",
+    "list": "Список",
+    "treemap": "Деревоподібна карта"
+  },
+  "list": {
+    "title": "Назва",
+    "space": "Місце (суцільна частина звільняється видаленням)",
+    "size": "Розмір",
+    "seeding": "Роздача",
+    "barTooltip": "Звільняє {{reclaimable}} з {{size}}",
+    "expand": "Розгорнути",
+    "collapse": "Згорнути"
+  },
+  "treemap": {
+    "breadcrumb": "Рівень карти",
+    "all": "Усі елементи",
+    "seriesDetails": "Деталі",
+    "zoomInto": "Показати сезони {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Клацніть серіал, щоб побачити його сезони, або будь-що інше для деталей. Shift-клацання або прапорець вибирає."
+  },
+  "sections": {
+    "library": "Бібліотека",
+    "orphans": "Осиротілі",
+    "summary": "Елементи: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Невідомо",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Деякі файли не вдалося перевірити на жорсткі посилання, тож реальне значення може бути більшим."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Роздається",
+      "lowRatio": "Низький рейтинг",
+      "inactive": "Неактивний",
+      "notSeeded": "Не роздається"
+    },
+    "ratio": "Рейтинг {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Роздається {{time}}",
+    "lastActivity": "Остання активність {{time}}",
+    "noActivity": "Активності не зафіксовано",
+    "crossSeeds": "Крос-сіди: {{total}}"
+  },
+  "details": {
+    "size": "Розмір",
+    "reclaimable": "Можна звільнити",
+    "ratio": "Рейтинг",
+    "uploaded": "Віддано",
+    "downloaded": "Завантажено",
+    "seedTime": "Час роздачі",
+    "lastActivity": "Остання активність",
+    "added": "Додано",
+    "libraryPaths": "Шляхи бібліотеки",
+    "downloadPaths": "Шляхи завантаження",
+    "files": "Файли",
+    "torrents": "Торенти",
+    "none": "Немає",
+    "links": "Посилання: {{links}}",
+    "linksUnknown": "Посилання: ?",
+    "hardlinked": "Жорстке посилання",
+    "singleCopy": "Єдина копія",
+    "main": "Основний",
+    "crossSeed": "Крос-сід"
+  },
+  "selection": {
+    "summary": "Вибрано: {{items}} · {{size}}",
+    "selectAll": "Вибрати всі видимі елементи",
+    "selectRow": "Вибрати {{title}}"
+  },
+  "status": {
+    "loadError": "Не вдалося завантажити дерево місця: {{error}}",
+    "empty": "Елементів Sonarr чи Radarr не знайдено.",
+    "noMatches": "Жоден елемент не відповідає фільтрам.",
+    "generatedAt": "Побудовано {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Видалити вибрані елементи",
+    "description": "Елементи: {{items}}. Видалені дані неможливо відновити.",
+    "optionTorrents": "Видалити торенти + крос-сіди",
+    "optionTorrentsHelp": "Прибирає кожен торент і всі його крос-сіди з qBittorrent разом із їхніми даними.",
+    "optionArrFiles": "Видалити файли в Sonarr/Radarr",
+    "optionArrFilesHelp": "Видаляє файли епізодів або фільму через Sonarr/Radarr, що прибирає копію з бібліотеки.",
+    "chooseOption": "Виберіть принаймні один варіант.",
+    "planning": "Планування…",
+    "planError": "Не вдалося спланувати видалення: {{error}}",
+    "reclaimable": "Звільнено місця: {{size}}",
+    "noActions": "З цими параметрами нічого видаляти.",
+    "plannedActions": "Заплановані дії",
+    "results": "Результати",
+    "confirm": "Видалити",
+    "deleting": "Видалення…",
+    "cancel": "Скасувати",
+    "close": "Закрити",
+    "executeError": "Не вдалося видалити: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Заплановано",
+    "ok": "Виконано",
+    "error": "Помилка",
+    "unknown": "Невідомо"
+  }
+}

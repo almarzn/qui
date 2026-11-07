@@ -1,0 +1,149 @@
+{
+  "nav": "Gestió de l’espai",
+  "page": {
+    "title": "Gestió de l’espai",
+    "description": "Mira quant espai ocupen els teus elements de Sonarr i Radarr, quant n’allibera eliminar-los i quins torrents els comparteixen."
+  },
+  "actions": {
+    "refresh": "Actualitza",
+    "delete": "Elimina",
+    "clearSelection": "Buida la selecció",
+    "refreshError": "No s’ha pogut actualitzar: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Elements compartits",
+      "notSeeded": "Sense compartir",
+      "orphanTorrents": "Torrents orfes",
+      "otherUsed": "Altre dades",
+      "free": "Lliure"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} seguits · {{free}} lliures · {{reclaimable}} recuperables",
+    "ariaLabel": "Ús del disc: {{used}} en ús de {{total}}",
+    "loadError": "No s’ha pogut carregar l’ús del disc: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Filtres ràpids",
+    "quick": {
+      "all": "Tots",
+      "lowRatio": "Ràtio baixa (<1)",
+      "inactive": "Inactius 30 d",
+      "notSeeded": "Sense compartir"
+    },
+    "more": "Més filtres",
+    "searchPlaceholder": "Cerca títols…",
+    "ratioBelow": "Ràtio inferior a",
+    "seedingLongerThan": "Compartint des de fa almenys (dies)",
+    "inactiveFor": "Inactiu des de fa almenys (dies)",
+    "sortBy": "Ordena per",
+    "sortSize": "Mida",
+    "sortReclaimable": "Recuperable",
+    "ascending": "Ascendent",
+    "descending": "Descendent"
+  },
+  "view": {
+    "label": "Vista",
+    "list": "Llista",
+    "treemap": "Mapa d’arbre"
+  },
+  "list": {
+    "title": "Títol",
+    "space": "Espai (la part plena s’allibera en eliminar)",
+    "size": "Mida",
+    "seeding": "Compartició",
+    "barTooltip": "Allibera {{reclaimable}} de {{size}}",
+    "expand": "Desplega",
+    "collapse": "Plega"
+  },
+  "treemap": {
+    "breadcrumb": "Nivell del mapa",
+    "all": "Tots els elements",
+    "seriesDetails": "Detalls",
+    "zoomInto": "Mostra les temporades de {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Fes clic en una sèrie per veure’n les temporades, o en qualsevol altra cosa per als detalls. Maj-clic o la casella selecciona."
+  },
+  "sections": {
+    "library": "Biblioteca",
+    "orphans": "Orfes",
+    "summary": "Elements: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Desconegut",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "No s’han pogut comprovar els enllaços durs d’alguns fitxers, així que la xifra real pot ser més alta."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Compartint",
+      "lowRatio": "Ràtio baixa",
+      "inactive": "Inactiu",
+      "notSeeded": "Sense compartir"
+    },
+    "ratio": "Ràtio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Compartint des de fa {{time}}",
+    "lastActivity": "Darrera activitat {{time}}",
+    "noActivity": "Cap activitat registrada",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
+  "details": {
+    "size": "Mida",
+    "reclaimable": "Recuperable",
+    "ratio": "Ràtio",
+    "uploaded": "Pujat",
+    "downloaded": "Baixat",
+    "seedTime": "Temps compartint",
+    "lastActivity": "Darrera activitat",
+    "added": "Afegit",
+    "libraryPaths": "Camins de la biblioteca",
+    "downloadPaths": "Camins de baixada",
+    "files": "Fitxers",
+    "torrents": "Torrents",
+    "none": "Cap",
+    "links": "Enllaços: {{links}}",
+    "linksUnknown": "Enllaços: ?",
+    "hardlinked": "Enllaç dur",
+    "singleCopy": "Còpia única",
+    "main": "Principal",
+    "crossSeed": "Cross-seed"
+  },
+  "selection": {
+    "summary": "Seleccionats: {{items}} · {{size}}",
+    "selectAll": "Selecciona tots els elements visibles",
+    "selectRow": "Selecciona {{title}}"
+  },
+  "status": {
+    "loadError": "No s’ha pogut carregar l’arbre de l’espai: {{error}}",
+    "empty": "No s’ha trobat cap element de Sonarr o Radarr.",
+    "noMatches": "Cap element coincideix amb els filtres.",
+    "generatedAt": "Generat {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Elimina els elements seleccionats",
+    "description": "Elements: {{items}}. Les dades eliminades no es poden recuperar.",
+    "optionTorrents": "Elimina els torrents + cross-seeds",
+    "optionTorrentsHelp": "Treu cada torrent i tots els seus cross-seeds de qBittorrent, juntament amb les seves dades.",
+    "optionArrFiles": "Elimina els fitxers a Sonarr/Radarr",
+    "optionArrFilesHelp": "Elimina els fitxers d’episodi o de pel·lícula a través de Sonarr/Radarr, cosa que treu la còpia de la biblioteca.",
+    "chooseOption": "Tria almenys una opció.",
+    "planning": "Planificant…",
+    "planError": "No s’ha pogut planificar l’eliminació: {{error}}",
+    "reclaimable": "Espai alliberat: {{size}}",
+    "noActions": "No hi ha res a eliminar amb aquestes opcions.",
+    "plannedActions": "Accions previstes",
+    "results": "Resultats",
+    "confirm": "Elimina",
+    "deleting": "Eliminant…",
+    "cancel": "Cancel·la",
+    "close": "Tanca",
+    "executeError": "No s’ha pogut eliminar: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Previst",
+    "ok": "Fet",
+    "error": "Ha fallat",
+    "unknown": "Desconegut"
+  }
+}

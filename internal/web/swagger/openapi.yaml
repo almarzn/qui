@@ -1017,6 +1017,100 @@ paths:
         '500':
           description: Failed to resolve title
 
+  /api/space/overview:
+    get:
+      tags:
+        - Space Management
+      summary: Space overview
+      description: |
+        Disk usage of the download and library mounts plus totals of the space tree.
+        Served from the same cache as /api/space/tree (about 5 minutes). Browser-only.
+      responses:
+        '200':
+          description: Mounts and totals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceOverview'
+        '502':
+          description: Building the space tree failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/space/tree:
+    get:
+      tags:
+        - Space Management
+      summary: Space tree
+      description: |
+        Sonarr series and seasons, Radarr movies, and orphans, each with the torrents behind it
+        and the bytes a delete frees (hardlink-aware). The server caches the tree for about
+        5 minutes. Filtering and sorting happen client-side. Browser-only.
+      parameters:
+        - name: refresh
+          in: query
+          required: false
+          description: Rebuild the tree instead of serving the cache
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Space tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceTree'
+        '400':
+          description: Invalid refresh value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Building the space tree failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/space/delete:
+    post:
+      tags:
+        - Space Management
+      summary: Delete space tree nodes
+      description: |
+        Deletes the torrents (with their data, optionally with cross-seeds) and the Sonarr episode
+        files or Radarr movie files of the given nodes. With dryRun the plan is returned and
+        nothing is deleted; reclaimableBytes is computed over the union of the selection.
+        Browser-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpaceDeleteRequest'
+      responses:
+        '200':
+          description: Planned or executed actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceDeleteResponse'
+        '400':
+          description: Invalid body, empty nodeIds, or unknown node id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Building the space tree failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/instances:
     get:
       tags:
@@ -10706,6 +10800,300 @@ components:
           type: string
           nullable: true
 
+    SpaceOverview:
+      type: object
+      required: [mounts, totals, generatedAt]
+      properties:
+        mounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceMount'
+        totals:
+          $ref: '#/components/schemas/SpaceTotals'
+        generatedAt:
+          type: string
+          format: date-time
+
+    SpaceMount:
+      type: object
+      required: [path, kind, totalBytes, usedBytes, freeBytes]
+      properties:
+        path:
+          type: string
+        kind:
+          type: string
+          enum: [download, library]
+        totalBytes:
+          type: integer
+          format: int64
+          description: 0 when only qBittorrent's free space is known
+        usedBytes:
+          type: integer
+          format: int64
+        freeBytes:
+          type: integer
+          format: int64
+
+    SpaceTotals:
+      type: object
+      required: [trackedBytes, reclaimableBytes, orphanTorrentBytes, orphanFileBytes]
+      properties:
+        trackedBytes:
+          type: integer
+          format: int64
+        reclaimableBytes:
+          type: integer
+          format: int64
+        orphanTorrentBytes:
+          type: integer
+          format: int64
+        orphanFileBytes:
+          type: integer
+          format: int64
+          description: |
+            Bytes of library files that no torrent seeds, each hardlinked file counted once.
+            These files stay inside their season or movie node; no orphanFile node is emitted for them.
+
+    SpaceTree:
+      type: object
+      required: [nodes, generatedAt]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceNode'
+        generatedAt:
+          type: string
+          format: date-time
+
+    SpaceNode:
+      type: object
+      required:
+        - id
+        - kind
+        - title
+        - sizeBytes
+        - reclaimableBytes
+        - reclaimableKnown
+        - libraryPaths
+        - downloadPaths
+        - files
+        - torrents
+        - stats
+      properties:
+        id:
+          type: string
+          description: |
+            Stable ID: sonarr:<inst>:series:<id>, sonarr:<inst>:season:<seriesId>:<n>,
+            radarr:<inst>:movie:<id>, orphan:torrent:<qbitInst>:<hash>, orphan:file:<base64url path>
+        kind:
+          type: string
+          enum: [series, season, movie, orphanTorrent, orphanFile]
+          description: |
+            orphanFile is reserved for library files that Sonarr and Radarr do not track and is
+            not emitted yet. A season or movie without torrents is not seeded.
+        title:
+          type: string
+        year:
+          type: integer
+        arrInstanceId:
+          type: integer
+        arrInstanceName:
+          type: string
+        arrType:
+          type: string
+          enum: [sonarr, radarr]
+        quality:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+        sizeBytes:
+          type: integer
+          format: int64
+          description: Bytes on disk of the node's library and torrent files, each hardlinked file counted once
+        reclaimableBytes:
+          type: integer
+          format: int64
+        reclaimableKnown:
+          type: boolean
+          description: False when a file could not be read, so its bytes are left out
+        libraryPaths:
+          type: array
+          items:
+            type: string
+        downloadPaths:
+          type: array
+          items:
+            type: string
+        files:
+          type: array
+          description: Empty on series
+          items:
+            $ref: '#/components/schemas/SpaceFile'
+        torrents:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceTorrent'
+        stats:
+          $ref: '#/components/schemas/SpaceStats'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceNode'
+
+    SpaceFile:
+      type: object
+      required: [sizeBytes, linkCount, hardlinked]
+      properties:
+        libraryPath:
+          type: string
+        downloadPath:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        linkCount:
+          type: [integer, 'null']
+          description: Null when qui could not read the file
+        hardlinked:
+          type: boolean
+
+    SpaceTorrent:
+      type: object
+      required:
+        - instanceId
+        - instanceName
+        - hash
+        - name
+        - tracker
+        - savePath
+        - contentPath
+        - sizeBytes
+        - uploaded
+        - downloaded
+        - ratio
+        - seedingTimeSeconds
+        - state
+        - isCrossSeed
+      properties:
+        instanceId:
+          type: integer
+        instanceName:
+          type: string
+        hash:
+          type: string
+        name:
+          type: string
+        tracker:
+          type: string
+          description: Tracker hostname only
+        savePath:
+          type: string
+        contentPath:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        uploaded:
+          type: integer
+          format: int64
+        downloaded:
+          type: integer
+          format: int64
+        ratio:
+          type: number
+        seedingTimeSeconds:
+          type: integer
+          format: int64
+        lastActivity:
+          type: string
+          format: date-time
+        addedOn:
+          type: string
+          format: date-time
+        state:
+          type: string
+        isCrossSeed:
+          type: boolean
+        crossSeedOf:
+          type: string
+
+    SpaceStats:
+      type: object
+      required: [uploaded, downloaded, ratio, seedingTimeSeconds]
+      properties:
+        uploaded:
+          type: integer
+          format: int64
+        downloaded:
+          type: integer
+          format: int64
+        ratio:
+          type: number
+        seedingTimeSeconds:
+          type: integer
+          format: int64
+          description: Longest seeding time among the torrents
+        lastActivity:
+          type: string
+          format: date-time
+          description: Latest activity among the torrents, omitted when unknown
+
+    SpaceDeleteRequest:
+      type: object
+      required: [nodeIds, deleteTorrents, deleteCrossSeeds, deleteArrFiles, dryRun]
+      properties:
+        nodeIds:
+          type: array
+          items:
+            type: string
+        deleteTorrents:
+          type: boolean
+        deleteCrossSeeds:
+          type: boolean
+          description: Only applies together with deleteTorrents
+        deleteArrFiles:
+          type: boolean
+        dryRun:
+          type: boolean
+
+    SpaceDeleteResponse:
+      type: object
+      required: [reclaimableBytes, actions]
+      properties:
+        reclaimableBytes:
+          type: integer
+          format: int64
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceDeleteAction'
+
+    SpaceDeleteAction:
+      type: object
+      required: [nodeId, type, target, status]
+      properties:
+        nodeId:
+          type: string
+        type:
+          type: string
+          enum: [deleteTorrent, deleteArrFile]
+        target:
+          type: string
+          description: '"<instance name>: <torrent name>" for a torrent, the library path for an arr file'
+        status:
+          type: string
+          enum: [planned, ok, error]
+        error:
+          type: string
+        isCrossSeed:
+          type: boolean
+          description: Set on deleteTorrent actions only
+        tracker:
+          type: string
+          description: Tracker hostname of a deleteTorrent action; omitted when unknown
+
     ArrResolveResponse:
       type: object
       properties:
@@ -11312,6 +11700,8 @@ tags:
     description: Notification-related endpoints for targets and events
   - name: ARR Integrations
     description: Sonarr/Radarr instance management for external ID lookups
+  - name: Space Management
+    description: Sonarr/Radarr items with their torrents, reclaimable space, and delete
   - name: Client API Keys
     description: Client API key management for external applications
   - name: External Programs

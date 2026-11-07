@@ -1,0 +1,149 @@
+{
+  "nav": "Gestion de l’espace",
+  "page": {
+    "title": "Gestion de l’espace",
+    "description": "Voyez l’espace disque occupé par vos éléments Sonarr et Radarr, ce que leur suppression libère et quels torrents les partagent."
+  },
+  "actions": {
+    "refresh": "Actualiser",
+    "delete": "Supprimer",
+    "clearSelection": "Vider la sélection",
+    "refreshError": "Échec de l’actualisation : {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Éléments partagés",
+      "notSeeded": "Non partagé",
+      "orphanTorrents": "Torrents orphelins",
+      "otherUsed": "Autre espace utilisé",
+      "free": "Libre"
+    },
+    "segmentTooltip": "{{label}} : {{size}}",
+    "summary": "{{tracked}} suivis · {{free}} libres · {{reclaimable}} récupérables",
+    "ariaLabel": "Utilisation du disque : {{used}} utilisés sur {{total}}",
+    "loadError": "Impossible de charger l’utilisation du disque : {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Filtres rapides",
+    "quick": {
+      "all": "Tout",
+      "lowRatio": "Ratio faible (<1)",
+      "inactive": "Inactif 30 j",
+      "notSeeded": "Non partagé"
+    },
+    "more": "Plus de filtres",
+    "searchPlaceholder": "Rechercher des titres…",
+    "ratioBelow": "Ratio inférieur à",
+    "seedingLongerThan": "En partage depuis au moins (jours)",
+    "inactiveFor": "Inactif depuis au moins (jours)",
+    "sortBy": "Trier par",
+    "sortSize": "Taille",
+    "sortReclaimable": "Récupérable",
+    "ascending": "Croissant",
+    "descending": "Décroissant"
+  },
+  "view": {
+    "label": "Vue",
+    "list": "Liste",
+    "treemap": "Carte proportionnelle"
+  },
+  "list": {
+    "title": "Titre",
+    "space": "Espace (la partie pleine est libérée par une suppression)",
+    "size": "Taille",
+    "seeding": "Partage",
+    "barTooltip": "Libère {{reclaimable}} sur {{size}}",
+    "expand": "Déplier",
+    "collapse": "Replier"
+  },
+  "treemap": {
+    "breadcrumb": "Niveau de la carte",
+    "all": "Tous les éléments",
+    "seriesDetails": "Détails",
+    "zoomInto": "Afficher les saisons de {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Cliquez sur une série pour voir ses saisons, ou sur un autre élément pour ses détails. Maj-clic ou la case à cocher sélectionne."
+  },
+  "sections": {
+    "library": "Bibliothèque",
+    "orphans": "Orphelins",
+    "summary": "Éléments : {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Inconnu",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Certains fichiers n’ont pas pu être vérifiés pour les liens physiques, le chiffre réel peut être plus élevé."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "En partage",
+      "lowRatio": "Ratio faible",
+      "inactive": "Inactif",
+      "notSeeded": "Non partagé"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "En partage depuis {{time}}",
+    "lastActivity": "Dernière activité {{time}}",
+    "noActivity": "Aucune activité enregistrée",
+    "crossSeeds": "Cross-seeds : {{total}}"
+  },
+  "details": {
+    "size": "Taille",
+    "reclaimable": "Récupérable",
+    "ratio": "Ratio",
+    "uploaded": "Envoyé",
+    "downloaded": "Reçu",
+    "seedTime": "Durée de partage",
+    "lastActivity": "Dernière activité",
+    "added": "Ajouté",
+    "libraryPaths": "Chemins de bibliothèque",
+    "downloadPaths": "Chemins de téléchargement",
+    "files": "Fichiers",
+    "torrents": "Torrents",
+    "none": "Aucun",
+    "links": "Liens : {{links}}",
+    "linksUnknown": "Liens : ?",
+    "hardlinked": "Lien physique",
+    "singleCopy": "Copie unique",
+    "main": "Principal",
+    "crossSeed": "Cross-seed"
+  },
+  "selection": {
+    "summary": "Sélection : {{items}} · {{size}}",
+    "selectAll": "Sélectionner tous les éléments visibles",
+    "selectRow": "Sélectionner {{title}}"
+  },
+  "status": {
+    "loadError": "Impossible de charger l’arborescence : {{error}}",
+    "empty": "Aucun élément Sonarr ou Radarr trouvé.",
+    "noMatches": "Aucun élément ne correspond aux filtres.",
+    "generatedAt": "Généré {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Supprimer les éléments sélectionnés",
+    "description": "Éléments : {{items}}. Les données supprimées ne peuvent pas être récupérées.",
+    "optionTorrents": "Supprimer les torrents + cross-seeds",
+    "optionTorrentsHelp": "Retire chaque torrent et tous ses cross-seeds de qBittorrent, avec leurs données.",
+    "optionArrFiles": "Supprimer les fichiers dans Sonarr/Radarr",
+    "optionArrFilesHelp": "Supprime les fichiers d’épisode ou de film via Sonarr/Radarr, ce qui retire la copie de la bibliothèque.",
+    "chooseOption": "Choisissez au moins une option.",
+    "planning": "Planification…",
+    "planError": "Impossible de planifier la suppression : {{error}}",
+    "reclaimable": "Espace libéré : {{size}}",
+    "noActions": "Rien à supprimer avec ces options.",
+    "plannedActions": "Actions prévues",
+    "results": "Résultats",
+    "confirm": "Supprimer",
+    "deleting": "Suppression…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "executeError": "Échec de la suppression : {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Prévu",
+    "ok": "Terminé",
+    "error": "Échec",
+    "unknown": "Inconnu"
+  }
+}

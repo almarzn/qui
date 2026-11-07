@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { UnifiedScopeDropdownSection } from "@/components/layout/UnifiedScopeDropdownSection"
+import { useSpaceManagementAvailable } from "@/features/space-management"
 import { Logo } from "@/components/ui/Logo"
 import { NapsterLogo } from "@/components/ui/NapsterLogo"
 import { Separator } from "@/components/ui/separator"
@@ -39,6 +40,7 @@ import {
   GitBranch,
   Globe,
   HardDrive,
+  HardDriveDownload,
   Home,
   Loader2,
   LogOut,
@@ -98,6 +100,12 @@ const navigation: NavItem[] = [
     titleKey: "nav.rss",
     href: "/rss",
     icon: Rss,
+  },
+  {
+    id: "space-management",
+    titleKey: "spaceManagement:nav",
+    href: "/space-management",
+    icon: HardDriveDownload,
   },
   {
     id: "settings",
@@ -169,6 +177,7 @@ export function Sidebar() {
   const hasConfiguredInstances = (instances?.length ?? 0) > 0
 
   const { state: crossSeedInstanceState } = useCrossSeedInstanceState()
+  const showSpaceManagement = useSpaceManagementAvailable()
 
   const appVersion = getAppVersion()
 
@@ -197,7 +206,7 @@ export function Sidebar() {
 
       <nav className="flex flex-1 min-h-0 flex-col overflow-y-auto px-3">
         <div className="space-y-1">
-          {!isDemo && navigation.map((item) => {
+          {!isDemo && navigation.filter(item => item.id !== "space-management" || showSpaceManagement).map((item) => {
             const Icon = item.icon
             const isActive = item.isActive? item.isActive(location.pathname, routeSearch): location.pathname === item.href
 

@@ -1,0 +1,149 @@
+{
+  "nav": "Speicherverwaltung",
+  "page": {
+    "title": "Speicherverwaltung",
+    "description": "Sieh, wie viel Platz deine Sonarr- und Radarr-Einträge belegen, wie viel das Löschen freigibt und welche Torrents sie seeden."
+  },
+  "actions": {
+    "refresh": "Aktualisieren",
+    "delete": "Löschen",
+    "clearSelection": "Auswahl aufheben",
+    "refreshError": "Aktualisieren fehlgeschlagen: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Geseedete Einträge",
+      "notSeeded": "Nicht geseedet",
+      "orphanTorrents": "Verwaiste Torrents",
+      "otherUsed": "Sonstige Belegung",
+      "free": "Frei"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} erfasst · {{free}} frei · {{reclaimable}} freigebbar",
+    "ariaLabel": "Speicherbelegung: {{used}} von {{total}} belegt",
+    "loadError": "Speicherbelegung konnte nicht geladen werden: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Schnellfilter",
+    "quick": {
+      "all": "Alle",
+      "lowRatio": "Niedrige Ratio (<1)",
+      "inactive": "Inaktiv 30 T.",
+      "notSeeded": "Nicht geseedet"
+    },
+    "more": "Weitere Filter",
+    "searchPlaceholder": "Titel suchen…",
+    "ratioBelow": "Ratio unter",
+    "seedingLongerThan": "Seedet seit mindestens (Tage)",
+    "inactiveFor": "Inaktiv seit mindestens (Tage)",
+    "sortBy": "Sortieren nach",
+    "sortSize": "Größe",
+    "sortReclaimable": "Freigebbar",
+    "ascending": "Aufsteigend",
+    "descending": "Absteigend"
+  },
+  "view": {
+    "label": "Ansicht",
+    "list": "Liste",
+    "treemap": "Treemap"
+  },
+  "list": {
+    "title": "Titel",
+    "space": "Platz (der volle Teil wird beim Löschen frei)",
+    "size": "Größe",
+    "seeding": "Seeding",
+    "barTooltip": "Gibt {{reclaimable}} von {{size}} frei",
+    "expand": "Aufklappen",
+    "collapse": "Zuklappen"
+  },
+  "treemap": {
+    "breadcrumb": "Treemap-Ebene",
+    "all": "Alle Einträge",
+    "seriesDetails": "Details",
+    "zoomInto": "Staffeln von {{title}} anzeigen",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Klicke auf eine Serie, um ihre Staffeln zu sehen, oder auf etwas anderes für die Details. Umschalt-Klick oder das Kästchen wählt aus."
+  },
+  "sections": {
+    "library": "Bibliothek",
+    "orphans": "Verwaist",
+    "summary": "Einträge: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Unbekannt",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Einige Dateien konnten nicht auf Hardlinks geprüft werden, der tatsächliche Wert kann höher sein."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Seedet",
+      "lowRatio": "Niedrige Ratio",
+      "inactive": "Inaktiv",
+      "notSeeded": "Nicht geseedet"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Seedet seit {{time}}",
+    "lastActivity": "Letzte Aktivität {{time}}",
+    "noActivity": "Keine Aktivität erfasst",
+    "crossSeeds": "Cross-Seeds: {{total}}"
+  },
+  "details": {
+    "size": "Größe",
+    "reclaimable": "Freigebbar",
+    "ratio": "Ratio",
+    "uploaded": "Hochgeladen",
+    "downloaded": "Heruntergeladen",
+    "seedTime": "Seed-Zeit",
+    "lastActivity": "Letzte Aktivität",
+    "added": "Hinzugefügt",
+    "libraryPaths": "Bibliothekspfade",
+    "downloadPaths": "Download-Pfade",
+    "files": "Dateien",
+    "torrents": "Torrents",
+    "none": "Keine",
+    "links": "Links: {{links}}",
+    "linksUnknown": "Links: ?",
+    "hardlinked": "Hardlink",
+    "singleCopy": "Einzelne Kopie",
+    "main": "Haupt",
+    "crossSeed": "Cross-Seed"
+  },
+  "selection": {
+    "summary": "Ausgewählt: {{items}} · {{size}}",
+    "selectAll": "Alle sichtbaren Einträge auswählen",
+    "selectRow": "{{title}} auswählen"
+  },
+  "status": {
+    "loadError": "Der Speicherbaum konnte nicht geladen werden: {{error}}",
+    "empty": "Keine Sonarr- oder Radarr-Einträge gefunden.",
+    "noMatches": "Keine Einträge entsprechen den Filtern.",
+    "generatedAt": "Erstellt {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Ausgewählte Einträge löschen",
+    "description": "Einträge: {{items}}. Gelöschte Daten können nicht wiederhergestellt werden.",
+    "optionTorrents": "Torrents + Cross-Seeds löschen",
+    "optionTorrentsHelp": "Entfernt jeden Torrent und alle seine Cross-Seeds aus qBittorrent, zusammen mit ihren Daten.",
+    "optionArrFiles": "Dateien in Sonarr/Radarr löschen",
+    "optionArrFilesHelp": "Löscht die Episoden- oder Filmdateien über Sonarr/Radarr und entfernt damit die Kopie in der Bibliothek.",
+    "chooseOption": "Wähle mindestens eine Option.",
+    "planning": "Wird geplant…",
+    "planError": "Das Löschen konnte nicht geplant werden: {{error}}",
+    "reclaimable": "Freigegebener Platz: {{size}}",
+    "noActions": "Mit diesen Optionen gibt es nichts zu löschen.",
+    "plannedActions": "Geplante Aktionen",
+    "results": "Ergebnisse",
+    "confirm": "Löschen",
+    "deleting": "Wird gelöscht…",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "executeError": "Löschen fehlgeschlagen: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Geplant",
+    "ok": "Erledigt",
+    "error": "Fehlgeschlagen",
+    "unknown": "Unbekannt"
+  }
+}

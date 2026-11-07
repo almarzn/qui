@@ -1,0 +1,149 @@
+{
+  "nav": "Gerenciamento de espaço",
+  "page": {
+    "title": "Gerenciamento de espaço",
+    "description": "Veja quanto espaço seus itens do Sonarr e Radarr ocupam, quanto excluí-los libera e quais torrents os semeiam."
+  },
+  "actions": {
+    "refresh": "Atualizar",
+    "delete": "Excluir",
+    "clearSelection": "Limpar seleção",
+    "refreshError": "Não foi possível atualizar: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Itens semeados",
+      "notSeeded": "Não semeado",
+      "orphanTorrents": "Torrents órfãos",
+      "otherUsed": "Outros usos",
+      "free": "Livre"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} rastreados · {{free}} livres · {{reclaimable}} recuperáveis",
+    "ariaLabel": "Uso do disco: {{used}} de {{total}} usados",
+    "loadError": "Não foi possível carregar o uso do disco: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Filtros rápidos",
+    "quick": {
+      "all": "Todos",
+      "lowRatio": "Ratio baixo (<1)",
+      "inactive": "Inativos 30d",
+      "notSeeded": "Não semeados"
+    },
+    "more": "Mais filtros",
+    "searchPlaceholder": "Pesquisar títulos…",
+    "ratioBelow": "Ratio abaixo de",
+    "seedingLongerThan": "Semeando há pelo menos (dias)",
+    "inactiveFor": "Inativo há pelo menos (dias)",
+    "sortBy": "Ordenar por",
+    "sortSize": "Tamanho",
+    "sortReclaimable": "Recuperável",
+    "ascending": "Crescente",
+    "descending": "Decrescente"
+  },
+  "view": {
+    "label": "Visualização",
+    "list": "Lista",
+    "treemap": "Mapa de árvore"
+  },
+  "list": {
+    "title": "Título",
+    "space": "Espaço (a parte sólida é liberada ao excluir)",
+    "size": "Tamanho",
+    "seeding": "Semeando",
+    "barTooltip": "Libera {{reclaimable}} de {{size}}",
+    "expand": "Expandir",
+    "collapse": "Recolher"
+  },
+  "treemap": {
+    "breadcrumb": "Nível do mapa",
+    "all": "Todos os itens",
+    "seriesDetails": "Detalhes",
+    "zoomInto": "Mostrar as temporadas de {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Clique em uma série para ver as temporadas, ou em outro item para os detalhes. Shift-clique ou a caixa seleciona."
+  },
+  "sections": {
+    "library": "Biblioteca",
+    "orphans": "Órfãos",
+    "summary": "Itens: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Desconhecido",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Alguns arquivos não puderam ser verificados quanto a hardlinks, então o valor real pode ser maior."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Semeando",
+      "lowRatio": "Ratio baixo",
+      "inactive": "Inativo",
+      "notSeeded": "Não semeado"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Semeando há {{time}}",
+    "lastActivity": "Última atividade {{time}}",
+    "noActivity": "Nenhuma atividade registrada",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
+  "details": {
+    "size": "Tamanho",
+    "reclaimable": "Recuperável",
+    "ratio": "Ratio",
+    "uploaded": "Enviado",
+    "downloaded": "Baixado",
+    "seedTime": "Tempo semeando",
+    "lastActivity": "Última atividade",
+    "added": "Adicionado",
+    "libraryPaths": "Caminhos da biblioteca",
+    "downloadPaths": "Caminhos de download",
+    "files": "Arquivos",
+    "torrents": "Torrents",
+    "none": "Nenhum",
+    "links": "Links: {{links}}",
+    "linksUnknown": "Links: ?",
+    "hardlinked": "Hardlink",
+    "singleCopy": "Cópia única",
+    "main": "Principal",
+    "crossSeed": "Cross-seed"
+  },
+  "selection": {
+    "summary": "Selecionados: {{items}} · {{size}}",
+    "selectAll": "Selecionar todos os itens visíveis",
+    "selectRow": "Selecionar {{title}}"
+  },
+  "status": {
+    "loadError": "Não foi possível carregar a árvore de espaço: {{error}}",
+    "empty": "Nenhum item do Sonarr ou Radarr encontrado.",
+    "noMatches": "Nenhum item corresponde aos filtros.",
+    "generatedAt": "Gerado {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Excluir itens selecionados",
+    "description": "Itens: {{items}}. Dados excluídos não podem ser recuperados.",
+    "optionTorrents": "Excluir torrents + cross-seeds",
+    "optionTorrentsHelp": "Remove cada torrent e todos os seus cross-seeds do qBittorrent, junto com os dados.",
+    "optionArrFiles": "Excluir arquivos no Sonarr/Radarr",
+    "optionArrFilesHelp": "Exclui os arquivos de episódio ou filme pelo Sonarr/Radarr, o que remove a cópia da biblioteca.",
+    "chooseOption": "Escolha pelo menos uma opção.",
+    "planning": "Planejando…",
+    "planError": "Não foi possível planejar a exclusão: {{error}}",
+    "reclaimable": "Espaço liberado: {{size}}",
+    "noActions": "Nada a excluir com essas opções.",
+    "plannedActions": "Ações planejadas",
+    "results": "Resultados",
+    "confirm": "Excluir",
+    "deleting": "Excluindo…",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "executeError": "Falha ao excluir: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Planejado",
+    "ok": "Concluído",
+    "error": "Falhou",
+    "unknown": "Desconhecido"
+  }
+}

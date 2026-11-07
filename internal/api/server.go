@@ -44,6 +44,7 @@ import (
 	"github.com/autobrr/qui/internal/services/orphanscan"
 	"github.com/autobrr/qui/internal/services/peerclienticons"
 	"github.com/autobrr/qui/internal/services/reannounce"
+	"github.com/autobrr/qui/internal/services/spacemgmt"
 	"github.com/autobrr/qui/internal/services/trackericons"
 	"github.com/autobrr/qui/internal/sshpool"
 	"github.com/autobrr/qui/internal/update"
@@ -587,6 +588,8 @@ func (s *Server) Handler() (*chi.Mux, error) {
 				r.With(arr.Write).Post("/test", arrHandler.TestConnection)
 				r.With(arr.Read).Post("/resolve", arrHandler.Resolve)
 			})
+
+			r.With(browserOnly).Route("/space", spacemgmt.NewHandler(spacemgmt.NewService(s.arrInstanceStore, s.instanceStore, s.syncManager, s.backendPool)).Routes)
 
 			// Tracker customizations (nicknames and merged domains)
 			r.Route("/tracker-customizations", func(r chi.Router) {

@@ -1,0 +1,149 @@
+{
+  "nav": "Space Management",
+  "page": {
+    "title": "Space Management",
+    "description": "What your Sonarr and Radarr items take up on disk, how much deleting them frees, and which torrents seed them."
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "clearSelection": "Clear selection",
+    "refreshError": "Could not refresh: {{error}}"
+  },
+  "disk": {
+    "segments": {
+      "seeded": "Seeded items",
+      "notSeeded": "Not seeded",
+      "orphanTorrents": "Orphan torrents",
+      "otherUsed": "Other used",
+      "free": "Free"
+    },
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} tracked · {{free}} free · {{reclaimable}} reclaimable",
+    "ariaLabel": "Disk usage: {{used}} of {{total}} used",
+    "loadError": "Could not load disk usage: {{error}}"
+  },
+  "filters": {
+    "quickLabel": "Quick filters",
+    "quick": {
+      "all": "All",
+      "lowRatio": "Low ratio (<1)",
+      "inactive": "Inactive 30d",
+      "notSeeded": "Not seeded"
+    },
+    "more": "More filters",
+    "searchPlaceholder": "Search titles…",
+    "ratioBelow": "Ratio below",
+    "seedingLongerThan": "Seeding for at least (days)",
+    "inactiveFor": "Inactive for at least (days)",
+    "sortBy": "Sort by",
+    "sortSize": "Size",
+    "sortReclaimable": "Reclaimable",
+    "ascending": "Ascending",
+    "descending": "Descending"
+  },
+  "view": {
+    "label": "View",
+    "list": "List",
+    "treemap": "Treemap"
+  },
+  "list": {
+    "title": "Title",
+    "space": "Space (solid part is freed by a delete)",
+    "size": "Size",
+    "seeding": "Seeding",
+    "barTooltip": "Frees {{reclaimable}} of {{size}}",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "treemap": {
+    "breadcrumb": "Treemap level",
+    "all": "All items",
+    "seriesDetails": "Details",
+    "zoomInto": "Show the seasons of {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Click a series to see its seasons, or anything else for its details. Shift-click or tick the box to select."
+  },
+  "sections": {
+    "library": "Library",
+    "orphans": "Orphans",
+    "summary": "Items: {{items}} · {{size}}"
+  },
+  "reclaimable": {
+    "unknown": "Unknown",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Some files could not be checked for hardlinks, so the real figure may be higher."
+  },
+  "seeding": {
+    "states": {
+      "healthy": "Seeding",
+      "lowRatio": "Low ratio",
+      "inactive": "Inactive",
+      "notSeeded": "Not seeded"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Seeding for {{time}}",
+    "lastActivity": "Last activity {{time}}",
+    "noActivity": "No recorded activity",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
+  "details": {
+    "size": "Size",
+    "reclaimable": "Reclaimable",
+    "ratio": "Ratio",
+    "uploaded": "Uploaded",
+    "downloaded": "Downloaded",
+    "seedTime": "Seed time",
+    "lastActivity": "Last activity",
+    "added": "Added",
+    "libraryPaths": "Library paths",
+    "downloadPaths": "Download paths",
+    "files": "Files",
+    "torrents": "Torrents",
+    "none": "None",
+    "links": "Links: {{links}}",
+    "linksUnknown": "Links: ?",
+    "hardlinked": "Hardlinked",
+    "singleCopy": "Single copy",
+    "main": "Main",
+    "crossSeed": "Cross-seed"
+  },
+  "selection": {
+    "summary": "Selected: {{items}} · {{size}}",
+    "selectAll": "Select all visible items",
+    "selectRow": "Select {{title}}"
+  },
+  "status": {
+    "loadError": "Could not load the space tree: {{error}}",
+    "empty": "No Sonarr or Radarr items found.",
+    "noMatches": "No items match the filters.",
+    "generatedAt": "Built {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Delete selected items",
+    "description": "Items: {{items}}. Deleted data cannot be recovered.",
+    "optionTorrents": "Delete torrents + cross-seeds",
+    "optionTorrentsHelp": "Removes each torrent and all of its cross-seeds from qBittorrent, together with their data.",
+    "optionArrFiles": "Delete files in Sonarr/Radarr",
+    "optionArrFilesHelp": "Deletes the episode or movie files through Sonarr/Radarr, which removes the library copy.",
+    "chooseOption": "Choose at least one option.",
+    "planning": "Planning…",
+    "planError": "Could not plan the delete: {{error}}",
+    "reclaimable": "Space freed: {{size}}",
+    "noActions": "Nothing to delete with these options.",
+    "plannedActions": "Planned actions",
+    "results": "Results",
+    "confirm": "Delete",
+    "deleting": "Deleting…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "executeError": "Delete failed: {{error}}"
+  },
+  "actionStatus": {
+    "planned": "Planned",
+    "ok": "Done",
+    "error": "Failed",
+    "unknown": "Unknown"
+  }
+}
