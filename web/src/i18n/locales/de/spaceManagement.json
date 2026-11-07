@@ -1,0 +1,129 @@
+{
+  "nav": "Speicherverwaltung",
+  "page": {
+    "title": "Speicherverwaltung",
+    "description": "Sieh, wie viel Platz deine Sonarr- und Radarr-Einträge belegen, wie viel das Löschen freigibt und welche Torrents sie seeden."
+  },
+  "actions": {
+    "refresh": "Aktualisieren",
+    "delete": "Löschen",
+    "clearSelection": "Auswahl aufheben",
+    "refreshError": "Aktualisieren fehlgeschlagen: {{error}}"
+  },
+  "overview": {
+    "mountKinds": {
+      "download": "Download",
+      "library": "Bibliothek"
+    },
+    "freeOf": "{{free}} frei von {{total}}",
+    "used": "{{used}} belegt",
+    "tracked": "Erfasst",
+    "reclaimable": "Freigebbar",
+    "orphanTorrents": "Verwaiste Torrents",
+    "orphanFiles": "Verwaiste Dateien",
+    "loadError": "Speicherbelegung konnte nicht geladen werden: {{error}}"
+  },
+  "filters": {
+    "searchPlaceholder": "Titel suchen…",
+    "ratioBelow": "Ratio unter",
+    "seedingLongerThan": "Seedet seit mindestens (Tage)",
+    "inactiveFor": "Inaktiv seit mindestens (Tage)",
+    "sortBy": "Sortieren nach",
+    "sortSize": "Größe",
+    "sortReclaimable": "Freigebbar",
+    "ascending": "Aufsteigend",
+    "descending": "Absteigend",
+    "reset": "Filter zurücksetzen"
+  },
+  "columns": {
+    "title": "Titel",
+    "instance": "Instanz",
+    "quality": "Qualität",
+    "added": "Hinzugefügt",
+    "size": "Größe",
+    "reclaimable": "Freigebbar",
+    "uploaded": "Hochgeladen",
+    "downloaded": "Heruntergeladen",
+    "ratio": "Ratio",
+    "seedingTime": "Seed-Zeit",
+    "lastActivity": "Letzte Aktivität"
+  },
+  "sections": {
+    "library": "Bibliothek",
+    "orphans": "Verwaist",
+    "summary": "Einträge: {{count}} · {{size}}"
+  },
+  "kinds": {
+    "orphanTorrent": "Verwaister Torrent",
+    "orphanFile": "Verwaiste Datei"
+  },
+  "reclaimable": {
+    "unknown": "Unbekannt",
+    "atLeast": "≥ {{size}}",
+    "unknownHint": "Einige Dateien konnten nicht auf Hardlinks geprüft werden, der tatsächliche Wert kann höher sein."
+  },
+  "details": {
+    "libraryPaths": "Bibliothekspfade",
+    "downloadPaths": "Download-Pfade",
+    "files": "Dateien",
+    "torrents": "Torrents",
+    "none": "Keine",
+    "path": "Pfad",
+    "links": "Links",
+    "linksUnknown": "Unbekannt",
+    "hardlinked": "Hardlink",
+    "singleCopy": "Einzelne Kopie",
+    "main": "Haupt",
+    "crossSeed": "Cross-Seed",
+    "qbitInstance": "qBittorrent-Instanz",
+    "tracker": "Tracker",
+    "name": "Name",
+    "state": "Status",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "expand": "Aufklappen",
+    "collapse": "Zuklappen"
+  },
+  "selection": {
+    "summary": "Ausgewählt: {{count}} · {{size}}",
+    "selectAll": "Alle sichtbaren Einträge auswählen",
+    "selectRow": "{{title}} auswählen"
+  },
+  "status": {
+    "loadError": "Der Speicherbaum konnte nicht geladen werden: {{error}}",
+    "empty": "Keine Sonarr- oder Radarr-Einträge gefunden.",
+    "noMatches": "Keine Einträge entsprechen den Filtern.",
+    "generatedAt": "Erstellt {{time}}"
+  },
+  "deleteDialog": {
+    "title": "Ausgewählte Einträge löschen",
+    "description": "Einträge: {{count}}. Gelöschte Daten können nicht wiederhergestellt werden.",
+    "optionTorrents": "Torrents + Cross-Seeds löschen",
+    "optionTorrentsHelp": "Entfernt jeden Torrent und alle seine Cross-Seeds aus qBittorrent, zusammen mit ihren Daten.",
+    "optionArrFiles": "Dateien in Sonarr/Radarr löschen",
+    "optionArrFilesHelp": "Löscht die Episoden- oder Filmdateien über Sonarr/Radarr und entfernt damit die Kopie in der Bibliothek.",
+    "chooseOption": "Wähle mindestens eine Option.",
+    "planning": "Wird geplant…",
+    "planError": "Das Löschen konnte nicht geplant werden: {{error}}",
+    "reclaimable": "Freigegebener Platz: {{size}}",
+    "noActions": "Mit diesen Optionen gibt es nichts zu löschen.",
+    "plannedActions": "Geplante Aktionen",
+    "results": "Ergebnisse",
+    "confirm": "Löschen",
+    "deleting": "Wird gelöscht…",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "executeError": "Löschen fehlgeschlagen: {{error}}"
+  },
+  "actionTypes": {
+    "deleteTorrent": "Torrent löschen",
+    "deleteArrFile": "Bibliotheksdatei löschen",
+    "unknown": "Andere Aktion"
+  },
+  "actionStatus": {
+    "planned": "Geplant",
+    "ok": "Erledigt",
+    "error": "Fehlgeschlagen",
+    "unknown": "Unbekannt"
+  }
+}
