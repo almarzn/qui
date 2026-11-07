@@ -161,12 +161,21 @@ export function partitionNodes(nodes: SpaceNode[]): Record<SpaceSection, SpaceNo
 
 export type SpaceRow =
   | { type: "section"; id: string; section: SpaceSection; count: number; sizeBytes: number; collapsed: boolean }
-  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean; offsetBytes: number }
+  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean; offsetBytes: number; edges: BarEdges }
+
+/** Which ends of a bar are outer ends and get rounded corners. */
+export interface BarEdges {
+  start: boolean
+  end: boolean
+}
+
+const OUTER_EDGES: BarEdges = { start: true, end: true }
 
 /**
  * Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons.
  * A child's offsetBytes is where its bar starts: the parent's offset plus the sizes of the
- * siblings above it, so the seasons' bars line up end to end under the series bar.
+ * siblings above it, so the seasons' bars line up end to end under the series bar. Only the
+ * first and last season round their outer end, so the run reads as one bar.
  */
 export function flattenTree(
   sections: Record<SpaceSection, SpaceNode[]>,
@@ -175,16 +184,17 @@ export function flattenTree(
 ): SpaceRow[] {
   const rows: SpaceRow[] = []
 
-  const pushNode = (node: SpaceNode, depth: number, offsetBytes: number) => {
-    const hasChildren = (node.children?.length ?? 0) > 0
+  const pushNode = (node: SpaceNode, depth: number, offsetBytes: number, edges: BarEdges) => {
+    const children = node.children ?? []
+    const hasChildren = children.length > 0
     const isExpanded = hasChildren && expanded.has(node.id)
-    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded, offsetBytes })
+    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded, offsetBytes, edges })
     if (isExpanded) {
       let childOffset = offsetBytes
-      for (const child of node.children ?? []) {
-        pushNode(child, depth + 1, childOffset)
+      children.forEach((child, i) => {
+        pushNode(child, depth + 1, childOffset, { start: i === 0, end: i === children.length - 1 })
         childOffset += child.sizeBytes
-      }
+      })
     }
   }
 
@@ -201,7 +211,7 @@ export function flattenTree(
       collapsed,
     })
     if (!collapsed) {
-      for (const node of nodes) pushNode(node, 0, 0)
+      for (const node of nodes) pushNode(node, 0, 0, OUTER_EDGES)
     }
   }
 

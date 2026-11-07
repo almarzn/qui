@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next"
 
 import { SEEDING_COLORS, tint } from "../lib/colors"
 import {
+  type BarEdges,
   nodeCheckState,
   reclaimableDisplay,
   seedingState,
@@ -46,9 +47,18 @@ export interface SpaceListViewProps {
   onOpen: (node: SpaceNode) => void
 }
 
-function SizeBarCell({ node, maxBytes, offsetBytes, color }: { node: SpaceNode; maxBytes: number; offsetBytes: number; color: string }) {
+interface SizeBarCellProps {
+  node: SpaceNode
+  maxBytes: number
+  offsetBytes: number
+  edges: BarEdges
+  color: string
+}
+
+function SizeBarCell({ node, maxBytes, offsetBytes, edges, color }: SizeBarCellProps) {
   const { t } = useTranslation("spaceManagement")
   const bar = sizeBar(node, maxBytes, offsetBytes)
+  const solidShare = bar.totalPct > 0 ? (bar.reclaimablePct / bar.totalPct) * 100 : 0
   const display = reclaimableDisplay(node.reclaimableBytes, node.reclaimableKnown)
   const reclaimable = display.kind === "known"
     ? formatBytes(display.bytes)
@@ -58,17 +68,19 @@ function SizeBarCell({ node, maxBytes, offsetBytes, color }: { node: SpaceNode; 
     <Tooltip>
       <TooltipTrigger asChild>
         <div className="relative h-3 w-full overflow-hidden rounded-sm bg-muted/40">
-          {/* Kept by other links: hatched and light. */}
+          {/* Only outer ends are rounded, so the seasons of a series join into one bar. */}
           <div
-            className="absolute inset-y-0 rounded-sm"
+            className={cn("absolute inset-y-0 overflow-hidden", edges.start && "rounded-l-sm", edges.end && "rounded-r-sm")}
             style={{
               left: `${bar.offsetPct}%`,
               width: `${bar.totalPct}%`,
+              // Kept by other links: hatched and light.
               background: `repeating-linear-gradient(135deg, ${tint(color, 45)} 0 3px, ${tint(color, 15)} 3px 6px)`,
             }}
-          />
-          {/* Freed by a delete: solid. */}
-          <div className="absolute inset-y-0 rounded-sm" style={{ left: `${bar.offsetPct}%`, width: `${bar.reclaimablePct}%`, background: color }} />
+          >
+            {/* Freed by a delete: solid. */}
+            <div className="h-full" style={{ width: `${solidShare}%`, background: color }} />
+          </div>
         </div>
       </TooltipTrigger>
       <TooltipContent>{t("list.barTooltip", { reclaimable, size: formatBytes(node.sizeBytes) })}</TooltipContent>
@@ -80,6 +92,7 @@ interface NodeRowProps {
   node: SpaceNode
   depth: number
   offsetBytes: number
+  edges: BarEdges
   hasChildren: boolean
   expanded: boolean
   checkState: SpaceCheckState
@@ -90,7 +103,7 @@ interface NodeRowProps {
   onOpen: (node: SpaceNode) => void
 }
 
-const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
+const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, edges, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
   const { t } = useTranslation("spaceManagement")
   const state = seedingState(node, nowMs)
 
@@ -131,7 +144,7 @@ const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, hasChildren, e
           {node.year ? <span className="text-muted-foreground"> {node.year}</span> : null}
         </button>
       </div>
-      <SizeBarCell node={node} maxBytes={maxBytes} offsetBytes={offsetBytes} color={SEEDING_COLORS[state]} />
+      <SizeBarCell node={node} maxBytes={maxBytes} offsetBytes={offsetBytes} edges={edges} color={SEEDING_COLORS[state]} />
       <div className="text-right text-xs tabular-nums">{formatBytes(node.sizeBytes)}</div>
       <div><SeedingBadge node={node} state={state} /></div>
       <div><CrossSeedBadge node={node} /></div>
@@ -204,6 +217,7 @@ export function SpaceListView({ rows, maxBytes, nowMs, selected, allCheckState, 
                   node={row.node}
                   depth={row.depth}
                   offsetBytes={row.offsetBytes}
+                  edges={row.edges}
                   hasChildren={row.hasChildren}
                   expanded={row.expanded}
                   checkState={nodeCheckState(row.node, selected)}

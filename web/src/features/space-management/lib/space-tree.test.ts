@@ -196,6 +196,15 @@ describe("flattenTree", () => {
     const offsets = rows.flatMap(r => r.type === "node" ? [[r.id, r.offsetBytes]] : [])
     const s1 = series.children![0]
     expect(offsets).toEqual([["series", 0], ["s1", 0], ["s2", s1.sizeBytes], ["movie", 0], ["orphan", 0]])
+    // Only the outer ends of the season run are rounded; top-level bars round both ends.
+    const edges = rows.flatMap(r => r.type === "node" ? [[r.id, r.edges]] : [])
+    expect(edges).toEqual([
+      ["series", { start: true, end: true }],
+      ["s1", { start: true, end: false }],
+      ["s2", { start: false, end: true }],
+      ["movie", { start: true, end: true }],
+      ["orphan", { start: true, end: true }],
+    ])
   })
 
   it("hides the nodes of a collapsed section", () => {
