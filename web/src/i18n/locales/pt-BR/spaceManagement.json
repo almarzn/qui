@@ -10,20 +10,28 @@
     "clearSelection": "Limpar seleção",
     "refreshError": "Não foi possível atualizar: {{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "Download",
-      "library": "Biblioteca"
+  "disk": {
+    "segments": {
+      "seeded": "Itens semeados",
+      "notSeeded": "Não semeado",
+      "orphanTorrents": "Torrents órfãos",
+      "otherUsed": "Outros usos",
+      "free": "Livre"
     },
-    "freeOf": "{{free}} livres de {{total}}",
-    "used": "{{used}} usados",
-    "tracked": "Rastreado",
-    "reclaimable": "Recuperável",
-    "orphanTorrents": "Torrents órfãos",
-    "orphanFiles": "Arquivos órfãos",
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} rastreados · {{free}} livres · {{reclaimable}} recuperáveis",
+    "ariaLabel": "Uso do disco: {{used}} de {{total}} usados",
     "loadError": "Não foi possível carregar o uso do disco: {{error}}"
   },
   "filters": {
+    "quickLabel": "Filtros rápidos",
+    "quick": {
+      "all": "Todos",
+      "lowRatio": "Ratio baixo (<1)",
+      "inactive": "Inativos 30d",
+      "notSeeded": "Não semeados"
+    },
+    "more": "Mais filtros",
     "searchPlaceholder": "Pesquisar títulos…",
     "ratioBelow": "Ratio abaixo de",
     "seedingLongerThan": "Semeando há pelo menos (dias)",
@@ -32,60 +40,77 @@
     "sortSize": "Tamanho",
     "sortReclaimable": "Recuperável",
     "ascending": "Crescente",
-    "descending": "Decrescente",
-    "reset": "Redefinir filtros"
+    "descending": "Decrescente"
   },
-  "columns": {
+  "view": {
+    "label": "Visualização",
+    "list": "Lista",
+    "treemap": "Mapa de árvore"
+  },
+  "list": {
     "title": "Título",
-    "instance": "Instância",
-    "quality": "Qualidade",
-    "added": "Adicionado",
+    "space": "Espaço (a parte sólida é liberada ao excluir)",
     "size": "Tamanho",
-    "reclaimable": "Recuperável",
-    "uploaded": "Enviado",
-    "downloaded": "Baixado",
-    "ratio": "Ratio",
-    "seedingTime": "Tempo semeando",
-    "lastActivity": "Última atividade"
+    "seeding": "Semeando",
+    "barTooltip": "Libera {{reclaimable}} de {{size}}",
+    "expand": "Expandir",
+    "collapse": "Recolher"
+  },
+  "treemap": {
+    "breadcrumb": "Nível do mapa",
+    "all": "Todos os itens",
+    "seriesDetails": "Detalhes",
+    "zoomInto": "Mostrar as temporadas de {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Clique em uma série para ver as temporadas, ou em outro item para os detalhes. Shift-clique ou a caixa seleciona."
   },
   "sections": {
     "library": "Biblioteca",
     "orphans": "Órfãos",
-    "summary": "Itens: {{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "Torrent órfão",
-    "orphanFile": "Arquivo órfão"
+    "summary": "Itens: {{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "Desconhecido",
     "atLeast": "≥ {{size}}",
     "unknownHint": "Alguns arquivos não puderam ser verificados quanto a hardlinks, então o valor real pode ser maior."
   },
+  "seeding": {
+    "states": {
+      "healthy": "Semeando",
+      "lowRatio": "Ratio baixo",
+      "inactive": "Inativo",
+      "notSeeded": "Não semeado"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Semeando há {{time}}",
+    "lastActivity": "Última atividade {{time}}",
+    "noActivity": "Nenhuma atividade registrada",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
   "details": {
+    "size": "Tamanho",
+    "reclaimable": "Recuperável",
+    "ratio": "Ratio",
+    "uploaded": "Enviado",
+    "downloaded": "Baixado",
+    "seedTime": "Tempo semeando",
+    "lastActivity": "Última atividade",
+    "added": "Adicionado",
     "libraryPaths": "Caminhos da biblioteca",
     "downloadPaths": "Caminhos de download",
     "files": "Arquivos",
     "torrents": "Torrents",
     "none": "Nenhum",
-    "path": "Caminho",
-    "links": "Links",
-    "linksUnknown": "Desconhecido",
+    "links": "Links: {{links}}",
+    "linksUnknown": "Links: ?",
     "hardlinked": "Hardlink",
     "singleCopy": "Cópia única",
     "main": "Principal",
-    "crossSeed": "Cross-seed",
-    "qbitInstance": "Instância do qBittorrent",
-    "tracker": "Tracker",
-    "name": "Nome",
-    "state": "Estado",
-    "showDetails": "Mostrar detalhes",
-    "hideDetails": "Ocultar detalhes",
-    "expand": "Expandir",
-    "collapse": "Recolher"
+    "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Selecionados: {{count}} · {{size}}",
+    "summary": "Selecionados: {{items}} · {{size}}",
     "selectAll": "Selecionar todos os itens visíveis",
     "selectRow": "Selecionar {{title}}"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "Excluir itens selecionados",
-    "description": "Itens: {{count}}. Dados excluídos não podem ser recuperados.",
+    "description": "Itens: {{items}}. Dados excluídos não podem ser recuperados.",
     "optionTorrents": "Excluir torrents + cross-seeds",
     "optionTorrentsHelp": "Remove cada torrent e todos os seus cross-seeds do qBittorrent, junto com os dados.",
     "optionArrFiles": "Excluir arquivos no Sonarr/Radarr",
@@ -114,11 +139,6 @@
     "cancel": "Cancelar",
     "close": "Fechar",
     "executeError": "Falha ao excluir: {{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "Excluir torrent",
-    "deleteArrFile": "Excluir arquivo da biblioteca",
-    "unknown": "Outra ação"
   },
   "actionStatus": {
     "planned": "Planejado",

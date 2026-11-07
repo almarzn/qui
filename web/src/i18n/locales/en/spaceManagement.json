@@ -2,7 +2,7 @@
   "nav": "Space Management",
   "page": {
     "title": "Space Management",
-    "description": "See what your Sonarr and Radarr items take up on disk, how much deleting them frees, and which torrents seed them."
+    "description": "What your Sonarr and Radarr items take up on disk, how much deleting them frees, and which torrents seed them."
   },
   "actions": {
     "refresh": "Refresh",
@@ -10,20 +10,28 @@
     "clearSelection": "Clear selection",
     "refreshError": "Could not refresh: {{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "Download",
-      "library": "Library"
+  "disk": {
+    "segments": {
+      "seeded": "Seeded items",
+      "notSeeded": "Not seeded",
+      "orphanTorrents": "Orphan torrents",
+      "otherUsed": "Other used",
+      "free": "Free"
     },
-    "freeOf": "{{free}} free of {{total}}",
-    "used": "{{used}} used",
-    "tracked": "Tracked",
-    "reclaimable": "Reclaimable",
-    "orphanTorrents": "Orphan torrents",
-    "orphanFiles": "Orphan files",
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} tracked · {{free}} free · {{reclaimable}} reclaimable",
+    "ariaLabel": "Disk usage: {{used}} of {{total}} used",
     "loadError": "Could not load disk usage: {{error}}"
   },
   "filters": {
+    "quickLabel": "Quick filters",
+    "quick": {
+      "all": "All",
+      "lowRatio": "Low ratio (<1)",
+      "inactive": "Inactive 30d",
+      "notSeeded": "Not seeded"
+    },
+    "more": "More filters",
     "searchPlaceholder": "Search titles…",
     "ratioBelow": "Ratio below",
     "seedingLongerThan": "Seeding for at least (days)",
@@ -32,60 +40,77 @@
     "sortSize": "Size",
     "sortReclaimable": "Reclaimable",
     "ascending": "Ascending",
-    "descending": "Descending",
-    "reset": "Reset filters"
+    "descending": "Descending"
   },
-  "columns": {
+  "view": {
+    "label": "View",
+    "list": "List",
+    "treemap": "Treemap"
+  },
+  "list": {
     "title": "Title",
-    "instance": "Instance",
-    "quality": "Quality",
-    "added": "Added",
+    "space": "Space (solid part is freed by a delete)",
     "size": "Size",
-    "reclaimable": "Reclaimable",
-    "uploaded": "Uploaded",
-    "downloaded": "Downloaded",
-    "ratio": "Ratio",
-    "seedingTime": "Seed time",
-    "lastActivity": "Last activity"
+    "seeding": "Seeding",
+    "barTooltip": "Frees {{reclaimable}} of {{size}}",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "treemap": {
+    "breadcrumb": "Treemap level",
+    "all": "All items",
+    "seriesDetails": "Details",
+    "zoomInto": "Show the seasons of {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Click a series to see its seasons, or anything else for its details. Shift-click or tick the box to select."
   },
   "sections": {
     "library": "Library",
     "orphans": "Orphans",
-    "summary": "Items: {{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "Orphan torrent",
-    "orphanFile": "Orphan file"
+    "summary": "Items: {{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "Unknown",
     "atLeast": "≥ {{size}}",
     "unknownHint": "Some files could not be checked for hardlinks, so the real figure may be higher."
   },
+  "seeding": {
+    "states": {
+      "healthy": "Seeding",
+      "lowRatio": "Low ratio",
+      "inactive": "Inactive",
+      "notSeeded": "Not seeded"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Seeding for {{time}}",
+    "lastActivity": "Last activity {{time}}",
+    "noActivity": "No recorded activity",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
   "details": {
+    "size": "Size",
+    "reclaimable": "Reclaimable",
+    "ratio": "Ratio",
+    "uploaded": "Uploaded",
+    "downloaded": "Downloaded",
+    "seedTime": "Seed time",
+    "lastActivity": "Last activity",
+    "added": "Added",
     "libraryPaths": "Library paths",
     "downloadPaths": "Download paths",
     "files": "Files",
     "torrents": "Torrents",
     "none": "None",
-    "path": "Path",
-    "links": "Links",
-    "linksUnknown": "Unknown",
+    "links": "Links: {{links}}",
+    "linksUnknown": "Links: ?",
     "hardlinked": "Hardlinked",
     "singleCopy": "Single copy",
     "main": "Main",
-    "crossSeed": "Cross-seed",
-    "qbitInstance": "qBittorrent instance",
-    "tracker": "Tracker",
-    "name": "Name",
-    "state": "State",
-    "showDetails": "Show details",
-    "hideDetails": "Hide details",
-    "expand": "Expand",
-    "collapse": "Collapse"
+    "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Selected: {{count}} · {{size}}",
+    "summary": "Selected: {{items}} · {{size}}",
     "selectAll": "Select all visible items",
     "selectRow": "Select {{title}}"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "Delete selected items",
-    "description": "Items: {{count}}. Deleted data cannot be recovered.",
+    "description": "Items: {{items}}. Deleted data cannot be recovered.",
     "optionTorrents": "Delete torrents + cross-seeds",
     "optionTorrentsHelp": "Removes each torrent and all of its cross-seeds from qBittorrent, together with their data.",
     "optionArrFiles": "Delete files in Sonarr/Radarr",
@@ -114,11 +139,6 @@
     "cancel": "Cancel",
     "close": "Close",
     "executeError": "Delete failed: {{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "Delete torrent",
-    "deleteArrFile": "Delete library file",
-    "unknown": "Other action"
   },
   "actionStatus": {
     "planned": "Planned",

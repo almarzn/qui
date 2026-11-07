@@ -7,7 +7,7 @@ import i18n from "@/i18n"
 import { APIError } from "@/lib/api"
 import { getApiBaseUrl } from "@/lib/base-url"
 
-import type { SpaceDeleteRequest, SpaceDeleteResponse, SpaceOverview, SpaceTree } from "./types"
+import type { SpaceDeleteRequest, SpaceDeleteResponse, SpaceNode, SpaceOverview, SpaceTree } from "./types"
 
 // The feature keeps its own small client instead of growing the shared ApiClient,
 // so it can move into an extension later without touching lib/api.ts.
@@ -39,9 +39,24 @@ async function spaceRequest<T>(endpoint: string, init?: RequestInit): Promise<T>
   return response.json() as Promise<T>
 }
 
+// Go encodes a nil slice as null; the UI reads these lists without guards.
+function normalizeNode(node: SpaceNode): SpaceNode {
+  return {
+    ...node,
+    libraryPaths: node.libraryPaths ?? [],
+    downloadPaths: node.downloadPaths ?? [],
+    files: node.files ?? [],
+    torrents: node.torrents ?? [],
+    children: node.children?.map(normalizeNode),
+  }
+}
+
 export const spaceApi = {
   getOverview: () => spaceRequest<SpaceOverview>("/overview"),
-  getTree: (refresh = false) => spaceRequest<SpaceTree>(`/tree${refresh ? "?refresh=true" : ""}`),
+  getTree: async (refresh = false) => {
+    const tree = await spaceRequest<SpaceTree>(`/tree${refresh ? "?refresh=true" : ""}`)
+    return { ...tree, nodes: (tree.nodes ?? []).map(normalizeNode) }
+  },
   delete: (body: SpaceDeleteRequest) => spaceRequest<SpaceDeleteResponse>("/delete", {
     method: "POST",
     body: JSON.stringify(body),

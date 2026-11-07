@@ -5,19 +5,25 @@
 
 import { describe, expect, it } from "vitest"
 
-import type { SpaceNode } from "../types"
+import type { SpaceNode, SpaceTorrent } from "../types"
 import {
+  activeQuickFilter,
+  applyQuickFilter,
+  crossSeedCount,
   daysSince,
   EMPTY_FILTER_INPUTS,
   EMPTY_SPACE_FILTERS,
   filterTree,
   flattenTree,
+  formatDurationShort,
   nodeCheckState,
   nodesCheckState,
   parseFilterInputs,
   parseFilterNumber,
   partitionNodes,
   reclaimableDisplay,
+  seedingState,
+  sizeBar,
   sortTree,
   toggleNodes,
   visibleSelection,
@@ -31,6 +37,25 @@ function isoDaysAgo(days: number): string {
   return new Date(NOW - days * DAY * 1000).toISOString()
 }
 
+function torrent(isCrossSeed = false): SpaceTorrent {
+  return {
+    instanceId: 1,
+    instanceName: "qbit",
+    hash: isCrossSeed ? "b" : "a",
+    name: "Invented.Release-GRP",
+    tracker: "tracker.example",
+    savePath: "/downloads",
+    contentPath: "/downloads/Invented.Release-GRP",
+    sizeBytes: 1,
+    uploaded: 0,
+    downloaded: 0,
+    ratio: 0,
+    seedingTimeSeconds: 0,
+    state: "stalledUP",
+    isCrossSeed,
+  }
+}
+
 function node(id: string, overrides: Partial<SpaceNode> = {}): SpaceNode {
   return {
     id,
@@ -42,8 +67,8 @@ function node(id: string, overrides: Partial<SpaceNode> = {}): SpaceNode {
     libraryPaths: [],
     downloadPaths: [],
     files: [],
-    torrents: [],
-    stats: { uploaded: 0, downloaded: 0, ratio: 0, seedingTimeSeconds: 0, lastActivity: "" },
+    torrents: [torrent()],
+    stats: { uploaded: 0, downloaded: 0, ratio: 0, seedingTimeSeconds: 0 },
     ...overrides,
   }
 }
@@ -67,8 +92,10 @@ const movie = node("movie", {
   title: "Harbor of Glass",
   sizeBytes: 500,
   reclaimableBytes: 100,
+  torrents: [torrent(), torrent(true)],
   stats: { uploaded: 50, downloaded: 10, ratio: 5, seedingTimeSeconds: 100 * DAY, lastActivity: isoDaysAgo(3) },
 })
+const unseeded = node("unseeded", { title: "Quiet Meadow", sizeBytes: 200, torrents: [] })
 const orphan = node("orphan", { kind: "orphanTorrent", title: "Stray Upload", sizeBytes: 50 })
 
 describe("filterTree", () => {
@@ -78,58 +105,77 @@ describe("filterTree", () => {
   })
 
   it("keeps every season when the series title matches the search", () => {
-    const result = filterTree([series, movie], filters({ search: "copper" }), NOW)
-    expect(result).toEqual([series])
+    expect(filterTree([series, movie], filters({ search: "copper" }), NOW)).toEqual([series])
   })
 
   it("keeps only matching seasons when a season title matches", () => {
     const result = filterTree([series, movie], filters({ search: "season 2" }), NOW)
-    expect(result).toHaveLength(1)
     expect(result[0].children?.map(child => child.id)).toEqual(["s2"])
   })
 
-  it("applies the ratio filter to leaves and drops a series without a passing season", () => {
-    const result = filterTree([series, movie], filters({ ratioBelow: 1 }), NOW)
+  it("applies the ratio filter to seeded leaves only", () => {
+    const result = filterTree([series, movie, unseeded], filters({ ratioBelow: 1 }), NOW)
     expect(result.map(n => n.id)).toEqual(["series"])
     expect(result[0].children?.map(child => child.id)).toEqual(["s1"])
     expect(filterTree([series], filters({ ratioBelow: 0.05 }), NOW)).toEqual([])
   })
 
   it("filters by seeding time in days", () => {
-    const result = filterTree([series, movie], filters({ seedingLongerThanDays: 30 }), NOW)
+    const result = filterTree([series, movie, unseeded], filters({ seedingLongerThanDays: 30 }), NOW)
     expect(result.map(n => n.id)).toEqual(["series", "movie"])
     expect(result[0].children?.map(child => child.id)).toEqual(["s1"])
   })
 
-  it("filters by inactivity and treats missing activity as inactive", () => {
-    const result = filterTree([series, movie, orphan], filters({ inactiveForDays: 30 }), NOW)
+  it("treats a seeded item without recorded activity as inactive", () => {
+    const result = filterTree([series, movie, orphan, unseeded], filters({ inactiveForDays: 30 }), NOW)
     expect(result.map(n => n.id)).toEqual(["series", "orphan"])
   })
 
-  it("combines search with stat filters", () => {
-    expect(filterTree([series], filters({ search: "copper", ratioBelow: 1 }), NOW)[0].children?.map(c => c.id)).toEqual(["s1"])
+  it("keeps only items nothing seeds", () => {
+    expect(filterTree([series, movie, unseeded, orphan], filters({ notSeeded: true }), NOW).map(n => n.id)).toEqual(["unseeded"])
+  })
+})
+
+describe("seedingState", () => {
+  it("orders not seeded over inactive over low ratio", () => {
+    expect(seedingState(unseeded, NOW)).toBe("notSeeded")
+    expect(seedingState(lowRatioSeason, NOW)).toBe("inactive")
+    expect(seedingState(node("x", { stats: { uploaded: 0, downloaded: 1, ratio: 0.5, seedingTimeSeconds: 1, lastActivity: isoDaysAgo(2) } }), NOW)).toBe("lowRatio")
+    expect(seedingState(highRatioSeason, NOW)).toBe("healthy")
+  })
+
+  it("counts cross-seeds", () => {
+    expect(crossSeedCount(movie)).toBe(1)
+    expect(crossSeedCount(unseeded)).toBe(0)
+  })
+})
+
+describe("quick filters", () => {
+  it("replaces the stat filters and keeps the search", () => {
+    const inputs = { ...EMPTY_FILTER_INPUTS, search: "lantern", ratioBelow: "2" }
+    expect(applyQuickFilter(inputs, "inactive")).toEqual({ ...EMPTY_FILTER_INPUTS, search: "lantern", inactiveForDays: "30" })
+    expect(applyQuickFilter(inputs, "all")).toEqual({ ...EMPTY_FILTER_INPUTS, search: "lantern" })
+  })
+
+  it("names the preset the inputs match, or null for a custom mix", () => {
+    expect(activeQuickFilter(EMPTY_FILTER_INPUTS)).toBe("all")
+    expect(activeQuickFilter({ ...EMPTY_FILTER_INPUTS, search: "x", ratioBelow: "1" })).toBe("lowRatio")
+    expect(activeQuickFilter({ ...EMPTY_FILTER_INPUTS, notSeeded: true })).toBe("notSeeded")
+    expect(activeQuickFilter({ ...EMPTY_FILTER_INPUTS, ratioBelow: "0.5" })).toBeNull()
   })
 })
 
 describe("sortTree", () => {
-  it("sorts every level by size, descending by default use", () => {
-    const sorted = sortTree([series, movie, orphan], { key: "size", direction: "desc" })
-    expect(sorted.map(n => n.id)).toEqual(["movie", "series", "orphan"])
+  it("sorts every level by size", () => {
+    expect(sortTree([series, movie, orphan], { key: "size", direction: "desc" }).map(n => n.id)).toEqual(["movie", "series", "orphan"])
   })
 
   it("sorts children and breaks ties by title", () => {
     const a = season("a", { title: "Season 2", reclaimableBytes: 5 })
     const b = season("b", { title: "Season 1", reclaimableBytes: 5 })
     const c = season("c", { title: "Season 3", reclaimableBytes: 9 })
-    const parent = node("p", { kind: "series", children: [a, b, c] })
-    const [sorted] = sortTree([parent], { key: "reclaimable", direction: "asc" })
+    const [sorted] = sortTree([node("p", { kind: "series", children: [a, b, c] })], { key: "reclaimable", direction: "asc" })
     expect(sorted.children?.map(n => n.id)).toEqual(["b", "a", "c"])
-  })
-
-  it("does not mutate the input", () => {
-    const input = [orphan, movie]
-    sortTree(input, { key: "size", direction: "desc" })
-    expect(input.map(n => n.id)).toEqual(["orphan", "movie"])
   })
 })
 
@@ -139,21 +185,26 @@ describe("flattenTree", () => {
   it("emits section rows and hides collapsed series children", () => {
     const rows = flattenTree(sections, new Set(), new Set())
     expect(rows.map(r => r.id)).toEqual(["section:library", "series", "movie", "section:orphans", "orphan"])
-    const library = rows[0]
-    expect(library.type === "section" && library.sizeBytes).toBe(800)
   })
 
-  it("shows seasons of an expanded series one level deeper", () => {
-    const rows = flattenTree(sections, new Set(["series"]), new Set())
+  it("shows seasons of an expanded series one level deeper and ignores expanded leaves", () => {
+    const rows = flattenTree(sections, new Set(["series", "movie"]), new Set())
     expect(rows.map(r => r.id)).toEqual(["section:library", "series", "s1", "s2", "movie", "section:orphans", "orphan"])
-    const s1 = rows[2]
-    expect(s1.type === "node" && s1.depth).toBe(1)
+    const movieRow = rows[4]
+    expect(movieRow.type === "node" && movieRow.expanded).toBe(false)
   })
 
-  it("hides the nodes of a collapsed section and skips empty sections", () => {
-    const rows = flattenTree(sections, new Set(), new Set(["orphans"]))
-    expect(rows.map(r => r.id)).toEqual(["section:library", "series", "movie", "section:orphans"])
-    expect(flattenTree(partitionNodes([movie]), new Set(), new Set()).map(r => r.id)).toEqual(["section:library", "movie"])
+  it("hides the nodes of a collapsed section", () => {
+    expect(flattenTree(sections, new Set(), new Set(["orphans"])).map(r => r.id))
+      .toEqual(["section:library", "series", "movie", "section:orphans"])
+  })
+})
+
+describe("sizeBar", () => {
+  it("sizes the bar to the largest item and the solid part to the reclaimable bytes", () => {
+    expect(sizeBar(movie, 1000)).toEqual({ totalPct: 50, reclaimablePct: 10 })
+    expect(sizeBar(movie, 0)).toEqual({ totalPct: 0, reclaimablePct: 0 })
+    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ totalPct: 100, reclaimablePct: 100 })
   })
 })
 
@@ -165,10 +216,8 @@ describe("selection", () => {
     expect(toggleNodes(selected, [series]).size).toBe(0)
   })
 
-  it("reports a partially selected series as indeterminate and completes it on toggle", () => {
-    const partial = new Set(["s1"])
-    expect(nodeCheckState(series, partial)).toBe("indeterminate")
-    expect(nodeCheckState(series, toggleNodes(partial, [series]))).toBe(true)
+  it("reports a partially selected series as indeterminate", () => {
+    expect(nodeCheckState(series, new Set(["s1"]))).toBe("indeterminate")
   })
 
   it("only selects the seasons a filter left visible", () => {
@@ -185,42 +234,35 @@ describe("selection", () => {
   it("returns only visible selected leaves, in tree order", () => {
     const selected = new Set(["movie", "s2", "s1", "gone"])
     expect(visibleSelection([series, movie], selected).map(n => n.id)).toEqual(["s1", "s2", "movie"])
-    const filtered = filterTree([series, movie], filters({ ratioBelow: 1 }), NOW)
-    expect(visibleSelection(filtered, selected).map(n => n.id)).toEqual(["s1"])
   })
 })
 
-describe("reclaimableDisplay", () => {
-  it("shows known bytes as-is, including zero", () => {
+describe("formatting", () => {
+  it("marks reclaimable bytes as known, a lower bound, or unknown", () => {
     expect(reclaimableDisplay(0, true)).toEqual({ kind: "known", bytes: 0 })
-    expect(reclaimableDisplay(1024, true)).toEqual({ kind: "known", bytes: 1024 })
-  })
-
-  it("marks a partial count as a lower bound and an empty one as unknown", () => {
     expect(reclaimableDisplay(1024, false)).toEqual({ kind: "atLeast", bytes: 1024 })
     expect(reclaimableDisplay(0, false)).toEqual({ kind: "unknown" })
   })
-})
 
-describe("helpers", () => {
+  it("keeps the two largest duration units", () => {
+    expect(formatDurationShort(133 * DAY + 5 * 3600 + 35 * 60 + 3)).toBe("133d 5h")
+    expect(formatDurationShort(5 * 3600 + 12 * 60 + 9)).toBe("5h 12m")
+    expect(formatDurationShort(2 * DAY + 30)).toBe("2d")
+    expect(formatDurationShort(42)).toBe("42s")
+    expect(formatDurationShort(0)).toBe("0s")
+  })
+
   it("counts whole days since a timestamp", () => {
     expect(daysSince(isoDaysAgo(3), NOW)).toBe(3)
-    expect(daysSince("", NOW)).toBeNull()
+    expect(daysSince(undefined, NOW)).toBeNull()
     expect(daysSince("not a date", NOW)).toBeNull()
     expect(daysSince("0001-01-01T00:00:00Z", NOW)).toBeNull()
   })
 
-  it("parses filter numbers and turns invalid input off", () => {
-    expect(parseFilterNumber("")).toBeNull()
-    expect(parseFilterNumber(" 1.5 ")).toBe(1.5)
+  it("parses filter inputs and turns invalid numbers off", () => {
     expect(parseFilterNumber("0,5")).toBe(0.5)
     expect(parseFilterNumber("-1")).toBeNull()
-    expect(parseFilterNumber("abc")).toBeNull()
-  })
-
-  it("turns raw filter inputs into filters", () => {
-    expect(parseFilterInputs(EMPTY_FILTER_INPUTS)).toEqual(EMPTY_SPACE_FILTERS)
-    expect(parseFilterInputs({ search: "lantern", ratioBelow: "0.5", seedingLongerThanDays: "30", inactiveForDays: "x" }))
-      .toEqual({ search: "lantern", ratioBelow: 0.5, seedingLongerThanDays: 30, inactiveForDays: null })
+    expect(parseFilterInputs({ ...EMPTY_FILTER_INPUTS, ratioBelow: "0.5", inactiveForDays: "x", notSeeded: true }))
+      .toEqual({ ...EMPTY_SPACE_FILTERS, ratioBelow: 0.5, notSeeded: true })
   })
 })

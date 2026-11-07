@@ -30,9 +30,11 @@ import {
 import { useRefreshSpaceTree, useSpaceTree } from "../queries"
 import type { SpaceNode } from "../types"
 import { SpaceDeleteDialog } from "./SpaceDeleteDialog"
-import { SpaceFiltersBar } from "./SpaceFiltersBar"
-import { SpaceOverviewBar } from "./SpaceOverviewBar"
-import { SpaceTreeView } from "./SpaceTreeView"
+import { SpaceDetailsSheet } from "./SpaceDetailsSheet"
+import { SpaceDiskBar } from "./SpaceDiskBar"
+import { SpaceFiltersBar, type SpaceView } from "./SpaceFiltersBar"
+import { SpaceListView } from "./SpaceListView"
+import { SpaceTreemapView } from "./SpaceTreemapView"
 
 const EMPTY_NODES: SpaceNode[] = []
 
@@ -49,11 +51,13 @@ export function SpaceManagementPage() {
   const tree = useSpaceTree()
   const refresh = useRefreshSpaceTree()
 
+  const [view, setView] = useState<SpaceView>("list")
   const [filterInputs, setFilterInputs] = useState<SpaceFilterInputs>(EMPTY_FILTER_INPUTS)
   const [sort, setSort] = useState<SpaceSort>({ key: "size", direction: "desc" })
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
   const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<SpaceSection>>(() => new Set())
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+  const [detailsNode, setDetailsNode] = useState<SpaceNode | null>(null)
   const [deleteNodes, setDeleteNodes] = useState<SpaceNode[] | null>(null)
   // Filters compare against page-load time; a long-open page drifts by minutes at most.
   const [nowMs] = useState(() => Date.now())
@@ -68,6 +72,7 @@ export function SpaceManagementPage() {
   )
   const sections = useMemo(() => partitionNodes(visibleRoots), [visibleRoots])
   const rows = useMemo(() => flattenTree(sections, expanded, collapsedSections), [sections, expanded, collapsedSections])
+  const maxBytes = useMemo(() => visibleRoots.reduce((max, node) => Math.max(max, node.sizeBytes), 0), [visibleRoots])
   const openRoots = useMemo(
     () => (["library", "orphans"] as const).flatMap(section => collapsedSections.has(section) ? [] : sections[section]),
     [sections, collapsedSections]
@@ -94,7 +99,7 @@ export function SpaceManagementPage() {
     })
   }
 
-  const renderTree = () => {
+  const renderItems = () => {
     if (tree.isPending) {
       return (
         <div className="flex h-40 items-center justify-center">
@@ -108,18 +113,32 @@ export function SpaceManagementPage() {
     if (allNodes.length === 0) {
       return <p className="py-8 text-center text-sm text-muted-foreground">{t("status.empty")}</p>
     }
-    if (rows.length === 0 && hasActiveFilters(filters)) {
+    if (visibleRoots.length === 0 && hasActiveFilters(filters)) {
       return <p className="py-8 text-center text-sm text-muted-foreground">{t("status.noMatches")}</p>
     }
+    if (view === "treemap") {
+      return (
+        <SpaceTreemapView
+          roots={visibleRoots}
+          nowMs={nowMs}
+          selected={selected}
+          onToggleSelect={handleToggleSelect}
+          onOpen={setDetailsNode}
+        />
+      )
+    }
     return (
-      <SpaceTreeView
+      <SpaceListView
         rows={rows}
+        maxBytes={maxBytes}
+        nowMs={nowMs}
         selected={selected}
         allCheckState={nodesCheckState(openRoots, selected)}
         onToggleAll={handleToggleAll}
         onToggleSelect={handleToggleSelect}
         onToggleExpand={handleToggleExpand}
         onToggleSection={handleToggleSection}
+        onOpen={setDetailsNode}
       />
     )
   }
@@ -137,31 +156,42 @@ export function SpaceManagementPage() {
         }
       />
 
-      <SpaceOverviewBar />
+      <SpaceDiskBar />
 
-      <SpaceFiltersBar inputs={filterInputs} onInputsChange={setFilterInputs} sort={sort} onSortChange={setSort} />
+      <SpaceFiltersBar
+        inputs={filterInputs}
+        onInputsChange={setFilterInputs}
+        sort={sort}
+        onSortChange={setSort}
+        view={view}
+        onViewChange={setView}
+      />
 
-      <div className="flex min-h-8 flex-wrap items-center gap-3 text-sm">
-        {selection.length > 0 && (
-          <>
-            <span>{t("selection.summary", { count: selection.length, size: formatBytes(selectionSize) })}</span>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteNodes(selection)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("actions.delete")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-              {t("actions.clearSelection")}
-            </Button>
-          </>
-        )}
-        {tree.data?.generatedAt && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {t("status.generatedAt", { time: formatISOTimestamp(tree.data.generatedAt) })}
-          </span>
-        )}
-      </div>
+      {(selection.length > 0 || tree.data?.generatedAt) && (
+        <div className="flex min-h-8 flex-wrap items-center gap-3 text-sm">
+          {selection.length > 0 && (
+            <>
+              <span>{t("selection.summary", { items: selection.length, size: formatBytes(selectionSize) })}</span>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteNodes(selection)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("actions.delete")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                {t("actions.clearSelection")}
+              </Button>
+            </>
+          )}
+          {tree.data?.generatedAt && (
+            <span className="ml-auto text-xs text-muted-foreground">
+              {t("status.generatedAt", { time: formatISOTimestamp(tree.data.generatedAt) })}
+            </span>
+          )}
+        </div>
+      )}
 
-      {renderTree()}
+      {renderItems()}
+
+      <SpaceDetailsSheet node={detailsNode} nowMs={nowMs} onClose={() => setDetailsNode(null)} />
 
       {deleteNodes && (
         <SpaceDeleteDialog

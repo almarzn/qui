@@ -10,20 +10,28 @@
     "clearSelection": "清除選取",
     "refreshError": "無法重新整理：{{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "下載",
-      "library": "媒體庫"
+  "disk": {
+    "segments": {
+      "seeded": "做種中的項目",
+      "notSeeded": "未做種",
+      "orphanTorrents": "孤立種子",
+      "otherUsed": "其他佔用",
+      "free": "可用"
     },
-    "freeOf": "可用 {{free}}，共 {{total}}",
-    "used": "已用 {{used}}",
-    "tracked": "已追蹤",
-    "reclaimable": "可釋放",
-    "orphanTorrents": "孤立種子",
-    "orphanFiles": "孤立檔案",
+    "segmentTooltip": "{{label}}：{{size}}",
+    "summary": "已追蹤 {{tracked}} · 可用 {{free}} · 可釋放 {{reclaimable}}",
+    "ariaLabel": "磁碟使用量：已用 {{used}}，共 {{total}}",
     "loadError": "無法載入磁碟使用量：{{error}}"
   },
   "filters": {
+    "quickLabel": "快速篩選",
+    "quick": {
+      "all": "全部",
+      "lowRatio": "低分享率（<1）",
+      "inactive": "30 天無活動",
+      "notSeeded": "未做種"
+    },
+    "more": "更多篩選",
     "searchPlaceholder": "搜尋標題…",
     "ratioBelow": "分享率低於",
     "seedingLongerThan": "做種至少（天）",
@@ -32,60 +40,77 @@
     "sortSize": "大小",
     "sortReclaimable": "可釋放",
     "ascending": "遞增",
-    "descending": "遞減",
-    "reset": "重設篩選"
+    "descending": "遞減"
   },
-  "columns": {
+  "view": {
+    "label": "檢視",
+    "list": "清單",
+    "treemap": "矩形樹狀圖"
+  },
+  "list": {
     "title": "標題",
-    "instance": "實例",
-    "quality": "品質",
-    "added": "新增日期",
+    "space": "空間（實色部分刪除後釋放）",
     "size": "大小",
-    "reclaimable": "可釋放",
-    "uploaded": "已上傳",
-    "downloaded": "已下載",
-    "ratio": "分享率",
-    "seedingTime": "做種時間",
-    "lastActivity": "最後活動"
+    "seeding": "做種",
+    "barTooltip": "釋放 {{reclaimable}}，共 {{size}}",
+    "expand": "展開",
+    "collapse": "收合"
+  },
+  "treemap": {
+    "breadcrumb": "樹狀圖層級",
+    "all": "全部項目",
+    "seriesDetails": "詳細資料",
+    "zoomInto": "顯示 {{title}} 的各季",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "點擊影集查看各季，點擊其他項目查看詳細資料。按住 Shift 點擊或勾選核取方塊進行選取。"
   },
   "sections": {
     "library": "媒體庫",
     "orphans": "孤立項目",
-    "summary": "項目：{{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "孤立種子",
-    "orphanFile": "孤立檔案"
+    "summary": "項目：{{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "未知",
     "atLeast": "≥ {{size}}",
     "unknownHint": "部分檔案無法檢查硬連結，實際數值可能更高。"
   },
+  "seeding": {
+    "states": {
+      "healthy": "做種中",
+      "lowRatio": "低分享率",
+      "inactive": "無活動",
+      "notSeeded": "未做種"
+    },
+    "ratio": "分享率 {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "已做種 {{time}}",
+    "lastActivity": "最後活動 {{time}}",
+    "noActivity": "無活動記錄",
+    "crossSeeds": "輔種：{{total}}"
+  },
   "details": {
+    "size": "大小",
+    "reclaimable": "可釋放",
+    "ratio": "分享率",
+    "uploaded": "已上傳",
+    "downloaded": "已下載",
+    "seedTime": "做種時間",
+    "lastActivity": "最後活動",
+    "added": "新增日期",
     "libraryPaths": "媒體庫路徑",
     "downloadPaths": "下載路徑",
     "files": "檔案",
     "torrents": "種子",
     "none": "無",
-    "path": "路徑",
-    "links": "連結數",
-    "linksUnknown": "未知",
+    "links": "連結數：{{links}}",
+    "linksUnknown": "連結數：？",
     "hardlinked": "硬連結",
     "singleCopy": "單一副本",
     "main": "主種",
-    "crossSeed": "輔種",
-    "qbitInstance": "qBittorrent 實例",
-    "tracker": "Tracker",
-    "name": "名稱",
-    "state": "狀態",
-    "showDetails": "顯示詳細資料",
-    "hideDetails": "隱藏詳細資料",
-    "expand": "展開",
-    "collapse": "收合"
+    "crossSeed": "輔種"
   },
   "selection": {
-    "summary": "已選取：{{count}} · {{size}}",
+    "summary": "已選取：{{items}} · {{size}}",
     "selectAll": "選取所有可見項目",
     "selectRow": "選取 {{title}}"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "刪除選取的項目",
-    "description": "項目：{{count}}。刪除的資料無法復原。",
+    "description": "項目：{{items}}。刪除的資料無法復原。",
     "optionTorrents": "刪除種子 + 輔種",
     "optionTorrentsHelp": "從 qBittorrent 移除每個種子及其所有輔種，並刪除其資料。",
     "optionArrFiles": "在 Sonarr/Radarr 中刪除檔案",
@@ -114,11 +139,6 @@
     "cancel": "取消",
     "close": "關閉",
     "executeError": "刪除失敗：{{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "刪除種子",
-    "deleteArrFile": "刪除媒體庫檔案",
-    "unknown": "其他操作"
   },
   "actionStatus": {
     "planned": "已計畫",

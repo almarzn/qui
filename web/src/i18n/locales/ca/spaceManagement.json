@@ -10,20 +10,28 @@
     "clearSelection": "Buida la selecció",
     "refreshError": "No s’ha pogut actualitzar: {{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "Baixada",
-      "library": "Biblioteca"
+  "disk": {
+    "segments": {
+      "seeded": "Elements compartits",
+      "notSeeded": "Sense compartir",
+      "orphanTorrents": "Torrents orfes",
+      "otherUsed": "Altre dades",
+      "free": "Lliure"
     },
-    "freeOf": "{{free}} lliures de {{total}}",
-    "used": "{{used}} en ús",
-    "tracked": "Seguit",
-    "reclaimable": "Recuperable",
-    "orphanTorrents": "Torrents orfes",
-    "orphanFiles": "Fitxers orfes",
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} seguits · {{free}} lliures · {{reclaimable}} recuperables",
+    "ariaLabel": "Ús del disc: {{used}} en ús de {{total}}",
     "loadError": "No s’ha pogut carregar l’ús del disc: {{error}}"
   },
   "filters": {
+    "quickLabel": "Filtres ràpids",
+    "quick": {
+      "all": "Tots",
+      "lowRatio": "Ràtio baixa (<1)",
+      "inactive": "Inactius 30 d",
+      "notSeeded": "Sense compartir"
+    },
+    "more": "Més filtres",
     "searchPlaceholder": "Cerca títols…",
     "ratioBelow": "Ràtio inferior a",
     "seedingLongerThan": "Compartint des de fa almenys (dies)",
@@ -32,60 +40,77 @@
     "sortSize": "Mida",
     "sortReclaimable": "Recuperable",
     "ascending": "Ascendent",
-    "descending": "Descendent",
-    "reset": "Restableix els filtres"
+    "descending": "Descendent"
   },
-  "columns": {
+  "view": {
+    "label": "Vista",
+    "list": "Llista",
+    "treemap": "Mapa d’arbre"
+  },
+  "list": {
     "title": "Títol",
-    "instance": "Instància",
-    "quality": "Qualitat",
-    "added": "Afegit",
+    "space": "Espai (la part plena s’allibera en eliminar)",
     "size": "Mida",
-    "reclaimable": "Recuperable",
-    "uploaded": "Pujat",
-    "downloaded": "Baixat",
-    "ratio": "Ràtio",
-    "seedingTime": "Temps compartint",
-    "lastActivity": "Darrera activitat"
+    "seeding": "Compartició",
+    "barTooltip": "Allibera {{reclaimable}} de {{size}}",
+    "expand": "Desplega",
+    "collapse": "Plega"
+  },
+  "treemap": {
+    "breadcrumb": "Nivell del mapa",
+    "all": "Tots els elements",
+    "seriesDetails": "Detalls",
+    "zoomInto": "Mostra les temporades de {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Fes clic en una sèrie per veure’n les temporades, o en qualsevol altra cosa per als detalls. Maj-clic o la casella selecciona."
   },
   "sections": {
     "library": "Biblioteca",
     "orphans": "Orfes",
-    "summary": "Elements: {{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "Torrent orfe",
-    "orphanFile": "Fitxer orfe"
+    "summary": "Elements: {{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "Desconegut",
     "atLeast": "≥ {{size}}",
     "unknownHint": "No s’han pogut comprovar els enllaços durs d’alguns fitxers, així que la xifra real pot ser més alta."
   },
+  "seeding": {
+    "states": {
+      "healthy": "Compartint",
+      "lowRatio": "Ràtio baixa",
+      "inactive": "Inactiu",
+      "notSeeded": "Sense compartir"
+    },
+    "ratio": "Ràtio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Compartint des de fa {{time}}",
+    "lastActivity": "Darrera activitat {{time}}",
+    "noActivity": "Cap activitat registrada",
+    "crossSeeds": "Cross-seeds: {{total}}"
+  },
   "details": {
+    "size": "Mida",
+    "reclaimable": "Recuperable",
+    "ratio": "Ràtio",
+    "uploaded": "Pujat",
+    "downloaded": "Baixat",
+    "seedTime": "Temps compartint",
+    "lastActivity": "Darrera activitat",
+    "added": "Afegit",
     "libraryPaths": "Camins de la biblioteca",
     "downloadPaths": "Camins de baixada",
     "files": "Fitxers",
     "torrents": "Torrents",
     "none": "Cap",
-    "path": "Camí",
-    "links": "Enllaços",
-    "linksUnknown": "Desconegut",
+    "links": "Enllaços: {{links}}",
+    "linksUnknown": "Enllaços: ?",
     "hardlinked": "Enllaç dur",
     "singleCopy": "Còpia única",
     "main": "Principal",
-    "crossSeed": "Cross-seed",
-    "qbitInstance": "Instància de qBittorrent",
-    "tracker": "Tracker",
-    "name": "Nom",
-    "state": "Estat",
-    "showDetails": "Mostra els detalls",
-    "hideDetails": "Amaga els detalls",
-    "expand": "Desplega",
-    "collapse": "Plega"
+    "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Seleccionats: {{count}} · {{size}}",
+    "summary": "Seleccionats: {{items}} · {{size}}",
     "selectAll": "Selecciona tots els elements visibles",
     "selectRow": "Selecciona {{title}}"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "Elimina els elements seleccionats",
-    "description": "Elements: {{count}}. Les dades eliminades no es poden recuperar.",
+    "description": "Elements: {{items}}. Les dades eliminades no es poden recuperar.",
     "optionTorrents": "Elimina els torrents + cross-seeds",
     "optionTorrentsHelp": "Treu cada torrent i tots els seus cross-seeds de qBittorrent, juntament amb les seves dades.",
     "optionArrFiles": "Elimina els fitxers a Sonarr/Radarr",
@@ -114,11 +139,6 @@
     "cancel": "Cancel·la",
     "close": "Tanca",
     "executeError": "No s’ha pogut eliminar: {{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "Elimina el torrent",
-    "deleteArrFile": "Elimina el fitxer de la biblioteca",
-    "unknown": "Una altra acció"
   },
   "actionStatus": {
     "planned": "Previst",

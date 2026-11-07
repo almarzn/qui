@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { HttpResponse, http } from "msw"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { TooltipProvider } from "@/components/ui/tooltip"
 import "@/i18n"
 import { server } from "@/test/msw/server"
 
@@ -28,7 +29,7 @@ const movie: SpaceNode = {
   downloadPaths: ["/downloads/movies/Harbor.of.Glass.2019.1080p-GRP"],
   files: [],
   torrents: [],
-  stats: { uploaded: 0, downloaded: 0, ratio: 0, seedingTimeSeconds: 0, lastActivity: "" },
+  stats: { uploaded: 0, downloaded: 0, ratio: 0, seedingTimeSeconds: 0 },
 }
 
 const emptyTree: SpaceTree = { nodes: [], generatedAt: "2026-06-01T00:00:00Z" }
@@ -37,7 +38,9 @@ function renderDialog(onDeleted = vi.fn(), onClose = vi.fn()) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <SpaceDeleteDialog nodes={[movie]} onClose={onClose} onDeleted={onDeleted} />
+      <TooltipProvider>
+        <SpaceDeleteDialog nodes={[movie]} onClose={onClose} onDeleted={onDeleted} />
+      </TooltipProvider>
     </QueryClientProvider>
   )
   return { onDeleted, onClose }
@@ -55,7 +58,8 @@ describe("SpaceDeleteDialog", () => {
         return HttpResponse.json({
           reclaimableBytes: 4 * 1024 ** 3,
           actions: [
-            { nodeId: movie.id, type: "deleteTorrent", target: "Harbor.of.Glass.2019.1080p-GRP", status },
+            { nodeId: movie.id, type: "deleteTorrent", target: "qbit: Harbor.of.Glass.2019.1080p-GRP", status },
+            { nodeId: movie.id, type: "deleteTorrent", target: "qbit: Harbor.of.Glass.2019.1080p.REPACK-GRP", status, isCrossSeed: true, tracker: "tracker.example" },
             { nodeId: movie.id, type: "deleteArrFile", target: "/media/movies/Harbor of Glass (2019)/movie.mkv", status },
           ],
         })
@@ -70,8 +74,13 @@ describe("SpaceDeleteDialog", () => {
     const { onDeleted } = renderDialog()
 
     await screen.findByText("Planned actions")
-    expect(screen.getByText("Delete torrent")).not.toBeNull()
-    expect(screen.getByText("Delete library file")).not.toBeNull()
+    expect(screen.getByRole("heading", { name: "Harbor of Glass" })).not.toBeNull()
+    expect(screen.getByText("qbit: Harbor.of.Glass.2019.1080p-GRP")).not.toBeNull()
+    expect(screen.getByText("Cross-seed")).not.toBeNull()
+    expect(screen.getByText("tracker.example")).not.toBeNull()
+    // Library files show the file name; the path sits in a tooltip.
+    expect(screen.getByText("movie.mkv")).not.toBeNull()
+    expect(screen.queryByText("/media/movies/Harbor of Glass (2019)/movie.mkv")).toBeNull()
     expect(requests).toEqual([{
       nodeIds: [movie.id],
       deleteTorrents: true,

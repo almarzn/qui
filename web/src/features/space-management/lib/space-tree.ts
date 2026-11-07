@@ -6,9 +6,15 @@
 import type { SpaceNode } from "../types"
 
 // Pure tree logic for the Space Management page: filtering, sorting, flattening for the
-// virtualized list, and leaf-based selection. Kept free of React so it is unit-testable.
+// virtualized list, seeding state, and leaf-based selection. Kept free of React so it is unit-testable.
 
-const DAY_MS = 86_400_000
+const DAY_SECONDS = 86_400
+const DAY_MS = DAY_SECONDS * 1000
+
+/** Below this ratio a seeded item counts as low ratio (quick filter and colour). */
+export const LOW_RATIO = 1
+/** At least this many idle days make a seeded item inactive (quick filter and colour). */
+export const INACTIVE_DAYS = 30
 
 export type SpaceSortKey = "size" | "reclaimable"
 export type SpaceSortDirection = "asc" | "desc"
@@ -20,12 +26,14 @@ export interface SpaceSort {
 
 export interface SpaceFilters {
   search: string
-  /** Keep nodes whose rolled-up ratio is below this value. */
+  /** Keep seeded nodes whose rolled-up ratio is below this value. */
   ratioBelow: number | null
-  /** Keep nodes that have seeded for at least this many days. */
+  /** Keep seeded nodes that have seeded for at least this many days. */
   seedingLongerThanDays: number | null
-  /** Keep nodes without activity for at least this many days. */
+  /** Keep seeded nodes without activity for at least this many days. */
   inactiveForDays: number | null
+  /** Keep only nodes no torrent seeds. */
+  notSeeded: boolean
 }
 
 export const EMPTY_SPACE_FILTERS: SpaceFilters = {
@@ -33,6 +41,7 @@ export const EMPTY_SPACE_FILTERS: SpaceFilters = {
   ratioBelow: null,
   seedingLongerThanDays: null,
   inactiveForDays: null,
+  notSeeded: false,
 }
 
 export type SpaceSection = "library" | "orphans"
@@ -41,11 +50,21 @@ export function isOrphan(node: SpaceNode): boolean {
   return node.kind === "orphanTorrent" || node.kind === "orphanFile"
 }
 
+/** A node is seeded when at least one torrent (main or cross-seed) holds its data. */
+export function isSeeded(node: SpaceNode): boolean {
+  return node.torrents.length > 0
+}
+
+export function crossSeedCount(node: SpaceNode): number {
+  return node.torrents.reduce((count, torrent) => count + (torrent.isCrossSeed ? 1 : 0), 0)
+}
+
 export function hasActiveFilters(filters: SpaceFilters): boolean {
   return filters.search.trim() !== "" ||
     filters.ratioBelow !== null ||
     filters.seedingLongerThanDays !== null ||
-    filters.inactiveForDays !== null
+    filters.inactiveForDays !== null ||
+    filters.notSeeded
 }
 
 /** Whole days since an RFC3339 timestamp, or null when it is missing or unparsable. */
@@ -56,22 +75,37 @@ export function daysSince(iso: string | undefined, nowMs: number): number | null
   return Math.max(0, Math.floor((nowMs - time) / DAY_MS))
 }
 
+function isIdle(node: SpaceNode, days: number, nowMs: number): boolean {
+  // No recorded activity at all counts as idle: nothing has touched it.
+  const idle = daysSince(node.stats.lastActivity, nowMs)
+  return idle === null || idle >= days
+}
+
+export type SeedingState = "healthy" | "lowRatio" | "inactive" | "notSeeded"
+
+/** Colour class of a node: not seeded wins over inactive, which wins over low ratio. */
+export function seedingState(node: SpaceNode, nowMs: number): SeedingState {
+  if (!isSeeded(node)) return "notSeeded"
+  if (isIdle(node, INACTIVE_DAYS, nowMs)) return "inactive"
+  if (node.stats.ratio < LOW_RATIO) return "lowRatio"
+  return "healthy"
+}
+
 function matchesSearch(node: SpaceNode, needle: string): boolean {
   if (needle === "") return true
   return node.title.toLowerCase().includes(needle)
 }
 
 function matchesStats(node: SpaceNode, filters: SpaceFilters, nowMs: number): boolean {
+  const seeded = isSeeded(node)
+  if (filters.notSeeded && seeded) return false
   const { stats } = node
-  if (filters.ratioBelow !== null && !(stats.ratio < filters.ratioBelow)) return false
-  if (filters.seedingLongerThanDays !== null && stats.seedingTimeSeconds < filters.seedingLongerThanDays * 86_400) {
+  // Torrent stats describe seeding; an item nothing seeds has none to compare.
+  if (filters.ratioBelow !== null && !(seeded && stats.ratio < filters.ratioBelow)) return false
+  if (filters.seedingLongerThanDays !== null && !(seeded && stats.seedingTimeSeconds >= filters.seedingLongerThanDays * DAY_SECONDS)) {
     return false
   }
-  if (filters.inactiveForDays !== null) {
-    // No recorded activity at all counts as inactive: nothing has touched it.
-    const idle = daysSince(stats.lastActivity, nowMs)
-    if (idle !== null && idle < filters.inactiveForDays) return false
-  }
+  if (filters.inactiveForDays !== null && !(seeded && isIdle(node, filters.inactiveForDays, nowMs))) return false
   return true
 }
 
@@ -129,10 +163,7 @@ export type SpaceRow =
   | { type: "section"; id: string; section: SpaceSection; count: number; sizeBytes: number; collapsed: boolean }
   | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean }
 
-/**
- * Flattens the visible tree into rows for the virtualizer. `expanded` holds node ids:
- * an expanded series shows its seasons, an expanded leaf shows its details.
- */
+/** Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons. */
 export function flattenTree(
   sections: Record<SpaceSection, SpaceNode[]>,
   expanded: ReadonlySet<string>,
@@ -142,9 +173,9 @@ export function flattenTree(
 
   const pushNode = (node: SpaceNode, depth: number) => {
     const hasChildren = (node.children?.length ?? 0) > 0
-    const isExpanded = expanded.has(node.id)
+    const isExpanded = hasChildren && expanded.has(node.id)
     rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded })
-    if (hasChildren && isExpanded) {
+    if (isExpanded) {
       for (const child of node.children ?? []) pushNode(child, depth + 1)
     }
   }
@@ -167,6 +198,21 @@ export function flattenTree(
   }
 
   return rows
+}
+
+export interface SizeBar {
+  /** Width of the whole bar, in percent of the largest item. */
+  totalPct: number
+  /** Width of the reclaimable part, in percent of the largest item. */
+  reclaimablePct: number
+}
+
+/** Bar widths for a node next to the largest visible item. */
+export function sizeBar(node: SpaceNode, maxBytes: number): SizeBar {
+  if (maxBytes <= 0 || node.sizeBytes <= 0) return { totalPct: 0, reclaimablePct: 0 }
+  const totalPct = Math.min(100, (node.sizeBytes / maxBytes) * 100)
+  const reclaimable = Math.min(node.reclaimableBytes, node.sizeBytes)
+  return { totalPct, reclaimablePct: (Math.max(0, reclaimable) / maxBytes) * 100 }
 }
 
 // Selection holds leaf ids only (seasons, movies, orphans, and a series without seasons).
@@ -241,6 +287,23 @@ export function reclaimableDisplay(bytes: number, known: boolean): ReclaimableDi
   return bytes > 0 ? { kind: "atLeast", bytes } : { kind: "unknown" }
 }
 
+/** The two largest units of a duration: "133d 5h", "5h 12m", "12m 3s", "3s". */
+export function formatDurationShort(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds))
+  const units: Array<[string, number]> = [
+    ["d", Math.floor(seconds / DAY_SECONDS)],
+    ["h", Math.floor((seconds % DAY_SECONDS) / 3600)],
+    ["m", Math.floor((seconds % 3600) / 60)],
+    ["s", seconds % 60],
+  ]
+  const first = units.findIndex(([, value]) => value > 0)
+  if (first === -1) return "0s"
+  return units.slice(first, first + 2)
+    .filter(([, value]) => value > 0)
+    .map(([unit, value]) => `${value}${unit}`)
+    .join(" ")
+}
+
 /** Parses a filter input: empty or invalid input turns the filter off. */
 export function parseFilterNumber(raw: string): number | null {
   const trimmed = raw.trim()
@@ -255,6 +318,7 @@ export interface SpaceFilterInputs {
   ratioBelow: string
   seedingLongerThanDays: string
   inactiveForDays: string
+  notSeeded: boolean
 }
 
 export const EMPTY_FILTER_INPUTS: SpaceFilterInputs = {
@@ -262,6 +326,7 @@ export const EMPTY_FILTER_INPUTS: SpaceFilterInputs = {
   ratioBelow: "",
   seedingLongerThanDays: "",
   inactiveForDays: "",
+  notSeeded: false,
 }
 
 export function parseFilterInputs(inputs: SpaceFilterInputs): SpaceFilters {
@@ -270,5 +335,33 @@ export function parseFilterInputs(inputs: SpaceFilterInputs): SpaceFilters {
     ratioBelow: parseFilterNumber(inputs.ratioBelow),
     seedingLongerThanDays: parseFilterNumber(inputs.seedingLongerThanDays),
     inactiveForDays: parseFilterNumber(inputs.inactiveForDays),
+    notSeeded: inputs.notSeeded,
   }
+}
+
+export type QuickFilter = "all" | "lowRatio" | "inactive" | "notSeeded"
+
+export const QUICK_FILTERS: readonly QuickFilter[] = ["all", "lowRatio", "inactive", "notSeeded"]
+
+const QUICK_FILTER_PRESETS: Record<QuickFilter, Partial<SpaceFilterInputs>> = {
+  all: {},
+  lowRatio: { ratioBelow: String(LOW_RATIO) },
+  inactive: { inactiveForDays: String(INACTIVE_DAYS) },
+  notSeeded: { notSeeded: true },
+}
+
+/** Replaces the stat filters with a preset; the search text stays. */
+export function applyQuickFilter(inputs: SpaceFilterInputs, quick: QuickFilter): SpaceFilterInputs {
+  return { ...EMPTY_FILTER_INPUTS, search: inputs.search, ...QUICK_FILTER_PRESETS[quick] }
+}
+
+/** The preset the stat filters match exactly, or null for a custom combination. */
+export function activeQuickFilter(inputs: SpaceFilterInputs): QuickFilter | null {
+  return QUICK_FILTERS.find(quick => {
+    const preset = applyQuickFilter(inputs, quick)
+    return preset.ratioBelow.trim() === inputs.ratioBelow.trim() &&
+      preset.seedingLongerThanDays.trim() === inputs.seedingLongerThanDays.trim() &&
+      preset.inactiveForDays.trim() === inputs.inactiveForDays.trim() &&
+      preset.notSeeded === inputs.notSeeded
+  }) ?? null
 }

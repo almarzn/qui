@@ -19,6 +19,7 @@ export interface SpaceTotals {
   trackedBytes: number
   reclaimableBytes: number
   orphanTorrentBytes: number
+  /** Bytes of library files that no torrent seeds. */
   orphanFileBytes: number
 }
 
@@ -28,6 +29,8 @@ export interface SpaceOverview {
   generatedAt: string
 }
 
+// A season or movie with no torrents is "not seeded". orphanFile no longer covers files
+// Sonarr/Radarr track; those stay on their season or movie.
 export type SpaceNodeKind = "series" | "season" | "movie" | "orphanTorrent" | "orphanFile"
 
 export type SpaceArrType = "sonarr" | "radarr"
@@ -39,7 +42,7 @@ export interface SpaceStats {
   /** Max over the node's torrents. */
   seedingTimeSeconds: number
   /** RFC3339, max over the node's torrents. */
-  lastActivity: string
+  lastActivity?: string
 }
 
 export interface SpaceFile {
@@ -64,8 +67,8 @@ export interface SpaceTorrent {
   downloaded: number
   ratio: number
   seedingTimeSeconds: number
-  lastActivity: string
-  addedOn: string
+  lastActivity?: string
+  addedOn?: string
   state: string
   isCrossSeed: boolean
   crossSeedOf?: string
@@ -118,6 +121,10 @@ export interface SpaceDeleteAction {
   target: string
   status: SpaceDeleteActionStatus
   error?: string
+  /** Set on deleteTorrent actions. */
+  isCrossSeed?: boolean
+  /** Tracker hostname, set on deleteTorrent actions. */
+  tracker?: string
 }
 
 export interface SpaceDeleteResponse {

@@ -10,20 +10,28 @@
     "clearSelection": "Zrušit výběr",
     "refreshError": "Obnovení se nezdařilo: {{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "Stahování",
-      "library": "Knihovna"
+  "disk": {
+    "segments": {
+      "seeded": "Seedované položky",
+      "notSeeded": "Neseedováno",
+      "orphanTorrents": "Osiřelé torrenty",
+      "otherUsed": "Ostatní využití",
+      "free": "Volno"
     },
-    "freeOf": "{{free}} volno z {{total}}",
-    "used": "{{used}} využito",
-    "tracked": "Sledováno",
-    "reclaimable": "Uvolnitelné",
-    "orphanTorrents": "Osiřelé torrenty",
-    "orphanFiles": "Osiřelé soubory",
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "{{tracked}} sledováno · {{free}} volno · {{reclaimable}} uvolnitelné",
+    "ariaLabel": "Využití disku: {{used}} z {{total}}",
     "loadError": "Využití disku se nepodařilo načíst: {{error}}"
   },
   "filters": {
+    "quickLabel": "Rychlé filtry",
+    "quick": {
+      "all": "Vše",
+      "lowRatio": "Nízké ratio (<1)",
+      "inactive": "Neaktivní 30 d",
+      "notSeeded": "Neseedováno"
+    },
+    "more": "Další filtry",
     "searchPlaceholder": "Hledat názvy…",
     "ratioBelow": "Ratio pod",
     "seedingLongerThan": "Seeduje alespoň (dny)",
@@ -32,60 +40,77 @@
     "sortSize": "Velikost",
     "sortReclaimable": "Uvolnitelné",
     "ascending": "Vzestupně",
-    "descending": "Sestupně",
-    "reset": "Obnovit filtry"
+    "descending": "Sestupně"
   },
-  "columns": {
+  "view": {
+    "label": "Zobrazení",
+    "list": "Seznam",
+    "treemap": "Stromová mapa"
+  },
+  "list": {
     "title": "Název",
-    "instance": "Instance",
-    "quality": "Kvalita",
-    "added": "Přidáno",
+    "space": "Místo (plná část se smazáním uvolní)",
     "size": "Velikost",
-    "reclaimable": "Uvolnitelné",
-    "uploaded": "Odesláno",
-    "downloaded": "Staženo",
-    "ratio": "Ratio",
-    "seedingTime": "Doba seedování",
-    "lastActivity": "Poslední aktivita"
+    "seeding": "Seedování",
+    "barTooltip": "Uvolní {{reclaimable}} z {{size}}",
+    "expand": "Rozbalit",
+    "collapse": "Sbalit"
+  },
+  "treemap": {
+    "breadcrumb": "Úroveň mapy",
+    "all": "Všechny položky",
+    "seriesDetails": "Podrobnosti",
+    "zoomInto": "Zobrazit řady {{title}}",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "Klikněte na seriál pro jeho řady, nebo na cokoli jiného pro podrobnosti. Shift-klik nebo zaškrtávací pole vybírá."
   },
   "sections": {
     "library": "Knihovna",
     "orphans": "Osiřelé",
-    "summary": "Položky: {{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "Osiřelý torrent",
-    "orphanFile": "Osiřelý soubor"
+    "summary": "Položky: {{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "Neznámé",
     "atLeast": "≥ {{size}}",
     "unknownHint": "Některé soubory nebylo možné zkontrolovat na pevné odkazy, skutečná hodnota tedy může být vyšší."
   },
+  "seeding": {
+    "states": {
+      "healthy": "Seeduje",
+      "lowRatio": "Nízké ratio",
+      "inactive": "Neaktivní",
+      "notSeeded": "Neseedováno"
+    },
+    "ratio": "Ratio {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "Seeduje {{time}}",
+    "lastActivity": "Poslední aktivita {{time}}",
+    "noActivity": "Žádná zaznamenaná aktivita",
+    "crossSeeds": "Cross-seedy: {{total}}"
+  },
   "details": {
+    "size": "Velikost",
+    "reclaimable": "Uvolnitelné",
+    "ratio": "Ratio",
+    "uploaded": "Odesláno",
+    "downloaded": "Staženo",
+    "seedTime": "Doba seedování",
+    "lastActivity": "Poslední aktivita",
+    "added": "Přidáno",
     "libraryPaths": "Cesty v knihovně",
     "downloadPaths": "Cesty stahování",
     "files": "Soubory",
     "torrents": "Torrenty",
     "none": "Žádné",
-    "path": "Cesta",
-    "links": "Odkazy",
-    "linksUnknown": "Neznámé",
+    "links": "Odkazy: {{links}}",
+    "linksUnknown": "Odkazy: ?",
     "hardlinked": "Pevný odkaz",
     "singleCopy": "Jediná kopie",
     "main": "Hlavní",
-    "crossSeed": "Cross-seed",
-    "qbitInstance": "Instance qBittorrent",
-    "tracker": "Tracker",
-    "name": "Název",
-    "state": "Stav",
-    "showDetails": "Zobrazit podrobnosti",
-    "hideDetails": "Skrýt podrobnosti",
-    "expand": "Rozbalit",
-    "collapse": "Sbalit"
+    "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Vybráno: {{count}} · {{size}}",
+    "summary": "Vybráno: {{items}} · {{size}}",
     "selectAll": "Vybrat všechny viditelné položky",
     "selectRow": "Vybrat {{title}}"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "Smazat vybrané položky",
-    "description": "Položky: {{count}}. Smazaná data nelze obnovit.",
+    "description": "Položky: {{items}}. Smazaná data nelze obnovit.",
     "optionTorrents": "Smazat torrenty + cross-seedy",
     "optionTorrentsHelp": "Odebere každý torrent a všechny jeho cross-seedy z qBittorrentu i s jejich daty.",
     "optionArrFiles": "Smazat soubory v Sonarr/Radarr",
@@ -114,11 +139,6 @@
     "cancel": "Zrušit",
     "close": "Zavřít",
     "executeError": "Smazání se nezdařilo: {{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "Smazat torrent",
-    "deleteArrFile": "Smazat soubor knihovny",
-    "unknown": "Jiná akce"
   },
   "actionStatus": {
     "planned": "Naplánováno",

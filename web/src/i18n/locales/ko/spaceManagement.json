@@ -10,20 +10,28 @@
     "clearSelection": "선택 해제",
     "refreshError": "새로 고칠 수 없습니다: {{error}}"
   },
-  "overview": {
-    "mountKinds": {
-      "download": "다운로드",
-      "library": "라이브러리"
+  "disk": {
+    "segments": {
+      "seeded": "시딩 중인 항목",
+      "notSeeded": "시딩 안 됨",
+      "orphanTorrents": "고아 토렌트",
+      "otherUsed": "기타 사용",
+      "free": "여유 공간"
     },
-    "freeOf": "{{total}} 중 {{free}} 사용 가능",
-    "used": "{{used}} 사용 중",
-    "tracked": "추적됨",
-    "reclaimable": "확보 가능",
-    "orphanTorrents": "고아 토렌트",
-    "orphanFiles": "고아 파일",
+    "segmentTooltip": "{{label}}: {{size}}",
+    "summary": "추적 {{tracked}} · 여유 {{free}} · 확보 가능 {{reclaimable}}",
+    "ariaLabel": "디스크 사용량: {{total}} 중 {{used}} 사용",
     "loadError": "디스크 사용량을 불러올 수 없습니다: {{error}}"
   },
   "filters": {
+    "quickLabel": "빠른 필터",
+    "quick": {
+      "all": "전체",
+      "lowRatio": "낮은 비율 (<1)",
+      "inactive": "30일 비활성",
+      "notSeeded": "시딩 안 됨"
+    },
+    "more": "필터 더 보기",
     "searchPlaceholder": "제목 검색…",
     "ratioBelow": "비율 미만",
     "seedingLongerThan": "최소 시딩 기간(일)",
@@ -32,60 +40,77 @@
     "sortSize": "크기",
     "sortReclaimable": "확보 가능",
     "ascending": "오름차순",
-    "descending": "내림차순",
-    "reset": "필터 초기화"
+    "descending": "내림차순"
   },
-  "columns": {
+  "view": {
+    "label": "보기",
+    "list": "목록",
+    "treemap": "트리맵"
+  },
+  "list": {
     "title": "제목",
-    "instance": "인스턴스",
-    "quality": "품질",
-    "added": "추가됨",
+    "space": "공간 (진한 부분은 삭제 시 확보됨)",
     "size": "크기",
-    "reclaimable": "확보 가능",
-    "uploaded": "업로드",
-    "downloaded": "다운로드",
-    "ratio": "비율",
-    "seedingTime": "시딩 시간",
-    "lastActivity": "마지막 활동"
+    "seeding": "시딩",
+    "barTooltip": "{{size}} 중 {{reclaimable}} 확보",
+    "expand": "펼치기",
+    "collapse": "접기"
+  },
+  "treemap": {
+    "breadcrumb": "트리맵 단계",
+    "all": "모든 항목",
+    "seriesDetails": "세부 정보",
+    "zoomInto": "{{title}}의 시즌 보기",
+    "blockTitle": "{{title}} · {{size}}",
+    "hint": "시리즈를 클릭하면 시즌이, 다른 항목을 클릭하면 세부 정보가 표시됩니다. Shift 클릭 또는 체크박스로 선택합니다."
   },
   "sections": {
     "library": "라이브러리",
     "orphans": "고아 항목",
-    "summary": "항목: {{count}} · {{size}}"
-  },
-  "kinds": {
-    "orphanTorrent": "고아 토렌트",
-    "orphanFile": "고아 파일"
+    "summary": "항목: {{items}} · {{size}}"
   },
   "reclaimable": {
     "unknown": "알 수 없음",
     "atLeast": "≥ {{size}}",
     "unknownHint": "일부 파일의 하드링크를 확인할 수 없어 실제 값은 더 클 수 있습니다."
   },
+  "seeding": {
+    "states": {
+      "healthy": "시딩 중",
+      "lowRatio": "낮은 비율",
+      "inactive": "비활성",
+      "notSeeded": "시딩 안 됨"
+    },
+    "ratio": "비율 {{ratio}}",
+    "transfer": "↑ {{up}} · ↓ {{down}}",
+    "seedTime": "시딩 시간 {{time}}",
+    "lastActivity": "마지막 활동 {{time}}",
+    "noActivity": "기록된 활동 없음",
+    "crossSeeds": "크로스 시드: {{total}}"
+  },
   "details": {
+    "size": "크기",
+    "reclaimable": "확보 가능",
+    "ratio": "비율",
+    "uploaded": "업로드",
+    "downloaded": "다운로드",
+    "seedTime": "시딩 시간",
+    "lastActivity": "마지막 활동",
+    "added": "추가됨",
     "libraryPaths": "라이브러리 경로",
     "downloadPaths": "다운로드 경로",
     "files": "파일",
     "torrents": "토렌트",
     "none": "없음",
-    "path": "경로",
-    "links": "링크",
-    "linksUnknown": "알 수 없음",
+    "links": "링크: {{links}}",
+    "linksUnknown": "링크: ?",
     "hardlinked": "하드링크",
     "singleCopy": "단일 사본",
     "main": "기본",
-    "crossSeed": "크로스 시드",
-    "qbitInstance": "qBittorrent 인스턴스",
-    "tracker": "트래커",
-    "name": "이름",
-    "state": "상태",
-    "showDetails": "세부 정보 표시",
-    "hideDetails": "세부 정보 숨기기",
-    "expand": "펼치기",
-    "collapse": "접기"
+    "crossSeed": "크로스 시드"
   },
   "selection": {
-    "summary": "선택됨: {{count}} · {{size}}",
+    "summary": "선택됨: {{items}} · {{size}}",
     "selectAll": "보이는 항목 모두 선택",
     "selectRow": "{{title}} 선택"
   },
@@ -97,7 +122,7 @@
   },
   "deleteDialog": {
     "title": "선택한 항목 삭제",
-    "description": "항목: {{count}}. 삭제된 데이터는 복구할 수 없습니다.",
+    "description": "항목: {{items}}. 삭제된 데이터는 복구할 수 없습니다.",
     "optionTorrents": "토렌트 + 크로스 시드 삭제",
     "optionTorrentsHelp": "각 토렌트와 그 크로스 시드를 모두 데이터와 함께 qBittorrent에서 제거합니다.",
     "optionArrFiles": "Sonarr/Radarr에서 파일 삭제",
@@ -114,11 +139,6 @@
     "cancel": "취소",
     "close": "닫기",
     "executeError": "삭제 실패: {{error}}"
-  },
-  "actionTypes": {
-    "deleteTorrent": "토렌트 삭제",
-    "deleteArrFile": "라이브러리 파일 삭제",
-    "unknown": "기타 작업"
   },
   "actionStatus": {
     "planned": "계획됨",

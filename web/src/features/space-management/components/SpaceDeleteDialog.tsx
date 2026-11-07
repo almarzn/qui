@@ -15,11 +15,14 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatBytes } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
+import { FileX, Loader2, Trash2 } from "lucide-react"
 import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { groupDeleteActions } from "../lib/delete-plan"
+import { fileName } from "../lib/paths"
 import { useSpaceDelete, useSpaceDeletePlan } from "../queries"
 import type { SpaceDeleteAction, SpaceNode } from "../types"
 
@@ -29,24 +32,57 @@ interface SpaceDeleteDialogProps {
   onDeleted: () => void
 }
 
-function ActionList({ actions, titles }: { actions: SpaceDeleteAction[]; titles: ReadonlyMap<string, string> }) {
+function ActionStatus({ action }: { action: SpaceDeleteAction }) {
   const { t } = useTranslation("spaceManagement")
+  // A plan lists only planned actions; the badge matters once the delete ran.
+  if (action.status === "planned") return null
   return (
-    <ul className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2 text-xs">
-      {actions.map((action, index) => (
-        <li key={`${action.nodeId}|${action.type}|${action.target}|${index}`} className="space-y-0.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={action.status === "error" ? "destructive" : "secondary"}>
-              {t([`actionStatus.${action.status}`, "actionStatus.unknown"])}
-            </Badge>
-            <span className="font-medium">{t([`actionTypes.${action.type}`, "actionTypes.unknown"])}</span>
-            <span className="text-muted-foreground">{titles.get(action.nodeId) ?? ""}</span>
-          </div>
-          <div className="break-all font-mono text-muted-foreground">{action.target}</div>
-          {action.error && <div className="text-destructive">{action.error}</div>}
-        </li>
+    <Badge variant={action.status === "error" ? "destructive" : "secondary"}>
+      {t([`actionStatus.${action.status}`, "actionStatus.unknown"])}
+    </Badge>
+  )
+}
+
+function ActionGroups({ actions, nodes }: { actions: SpaceDeleteAction[]; nodes: SpaceNode[] }) {
+  const { t } = useTranslation("spaceManagement")
+  const groups = useMemo(() => groupDeleteActions(actions, nodes), [actions, nodes])
+  return (
+    <div className="max-h-72 space-y-3 overflow-y-auto rounded-md border p-3 text-xs">
+      {groups.map(group => (
+        <section key={group.nodeId} className="space-y-1">
+          <h4 className="text-sm font-medium">{group.title}</h4>
+          <ul className="space-y-1 pl-2">
+            {group.torrents.map((action, index) => (
+              <li key={`t|${action.target}|${index}`} className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                  <span className="min-w-0 break-all">{action.target}</span>
+                  {action.isCrossSeed && <Badge variant="outline">{t("details.crossSeed")}</Badge>}
+                  {action.tracker && <span className="text-muted-foreground">{action.tracker}</span>}
+                  <ActionStatus action={action} />
+                </div>
+                {action.error && <div className="text-destructive">{action.error}</div>}
+              </li>
+            ))}
+            {group.files.map((action, index) => (
+              <li key={`f|${action.target}|${index}`} className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <FileX className="h-3 w-3 text-muted-foreground" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="min-w-0 cursor-default break-all font-mono">{fileName(action.target)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-md break-all font-mono">{action.target}</TooltipContent>
+                  </Tooltip>
+                  <ActionStatus action={action} />
+                </div>
+                {action.error && <div className="text-destructive">{action.error}</div>}
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -62,7 +98,6 @@ export function SpaceDeleteDialog({ nodes, onClose, onDeleted }: SpaceDeleteDial
   const [deleteArrFiles, setDeleteArrFiles] = useState(true)
 
   const nodeIds = useMemo(() => nodes.map(node => node.id), [nodes])
-  const titles = useMemo(() => new Map(nodes.map(node => [node.id, node.title])), [nodes])
   const request = { nodeIds, deleteTorrents, deleteCrossSeeds: deleteTorrents, deleteArrFiles }
   const hasOption = deleteTorrents || deleteArrFiles
 
@@ -79,7 +114,7 @@ export function SpaceDeleteDialog({ nodes, onClose, onDeleted }: SpaceDeleteDial
       return (
         <div className="space-y-2">
           <div className="text-sm font-medium">{t("deleteDialog.results")}</div>
-          <ActionList actions={result.actions} titles={titles} />
+          <ActionGroups actions={result.actions} nodes={nodes} />
         </div>
       )
     }
@@ -106,7 +141,7 @@ export function SpaceDeleteDialog({ nodes, onClose, onDeleted }: SpaceDeleteDial
           {t("deleteDialog.reclaimable", { size: formatBytes(plan.data.reclaimableBytes) })}
         </div>
         <div className="text-xs text-muted-foreground">{t("deleteDialog.plannedActions")}</div>
-        <ActionList actions={plan.data.actions} titles={titles} />
+        <ActionGroups actions={plan.data.actions} nodes={nodes} />
       </div>
     )
   }
@@ -118,7 +153,7 @@ export function SpaceDeleteDialog({ nodes, onClose, onDeleted }: SpaceDeleteDial
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("deleteDialog.title")}</DialogTitle>
-          <DialogDescription>{t("deleteDialog.description", { count: nodes.length })}</DialogDescription>
+          <DialogDescription>{t("deleteDialog.description", { items: nodes.length })}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
