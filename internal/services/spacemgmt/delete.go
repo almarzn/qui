@@ -84,12 +84,7 @@ func (s *snapshot) planDelete(req DeleteRequest) (*deletePlan, error) {
 				seenTorrents[pt.key] = struct{}{}
 				selectedTorrents = append(selectedTorrents, pt)
 				plan.torrents = append(plan.torrents, torrentAction{action: len(plan.resp.Actions), key: pt.key})
-				plan.resp.Actions = append(plan.resp.Actions, DeleteAction{
-					NodeID: id,
-					Type:   ActionDeleteTorrent,
-					Target: s.torrentTarget(pt.key),
-					Status: StatusPlanned,
-				})
+				plan.resp.Actions = append(plan.resp.Actions, s.torrentDeleteAction(id, pt))
 			}
 		}
 		if req.DeleteArrFiles {
@@ -117,11 +112,20 @@ func (s *snapshot) planDelete(req DeleteRequest) (*deletePlan, error) {
 	return plan, nil
 }
 
-func (s *snapshot) torrentTarget(key torrentKey) string {
-	if e := s.torrents[key]; e != nil {
-		return e.instanceName + ": " + e.torrent.Name
+func (s *snapshot) torrentDeleteAction(nodeID string, pt plannedTorrent) DeleteAction {
+	isCrossSeed := pt.isCrossSeed
+	action := DeleteAction{
+		NodeID:      nodeID,
+		Type:        ActionDeleteTorrent,
+		Target:      pt.key.hash,
+		Status:      StatusPlanned,
+		IsCrossSeed: &isCrossSeed,
 	}
-	return key.hash
+	if e := s.torrents[pt.key]; e != nil {
+		action.Target = e.instanceName + ": " + e.torrent.Name
+		action.Tracker = trackerHost(e.torrent.Tracker)
+	}
+	return action
 }
 
 func (s *Service) executeTorrentDeletes(ctx context.Context, snap *snapshot, plan *deletePlan) {

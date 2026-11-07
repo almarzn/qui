@@ -10850,6 +10850,9 @@ components:
         orphanFileBytes:
           type: integer
           format: int64
+          description: |
+            Bytes of library files that no torrent seeds, each hardlinked file counted once.
+            These files stay inside their season or movie node; no orphanFile node is emitted for them.
 
     SpaceTree:
       type: object
@@ -10886,6 +10889,9 @@ components:
         kind:
           type: string
           enum: [series, season, movie, orphanTorrent, orphanFile]
+          description: |
+            orphanFile is reserved for library files that Sonarr and Radarr do not track and is
+            not emitted yet. A season or movie without torrents is not seeded.
         title:
           type: string
         year:
@@ -11081,6 +11087,12 @@ components:
           enum: [planned, ok, error]
         error:
           type: string
+        isCrossSeed:
+          type: boolean
+          description: Set on deleteTorrent actions only
+        tracker:
+          type: string
+          description: Tracker hostname of a deleteTorrent action; omitted when unknown
 
     ArrResolveResponse:
       type: object

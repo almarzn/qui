@@ -38,7 +38,6 @@ type arrFile struct {
 	arrType         models.ArrInstanceType
 	fileID          int
 	itemID          string
-	itemTitle       string
 	quality         string
 	added           time.Time
 	ref             fileRef
@@ -137,7 +136,7 @@ func (s *Service) build(ctx context.Context) (*snapshot, error) {
 	b.addArrNodes(arrs, library, links, historySeasons)
 	if !partial {
 		b.addOrphanTorrents(links.orphans)
-		b.addOrphanFiles(library, entries)
+		snap.totals.OrphanFileBytes = unseededLibraryBytes(library, entries)
 	}
 	snap.mounts = s.collectMounts(ctx, arrs, qbits)
 
@@ -320,7 +319,6 @@ func collectArrFiles(arrs []*arrSource) []*arrFile {
 					arrType:         inst.Type,
 					fileID:          ef.ID,
 					itemID:          seasonID(inst.ID, sr.ID, ef.SeasonNumber),
-					itemTitle:       fmt.Sprintf("%s - Season %d", sr.Title, ef.SeasonNumber),
 					quality:         ef.Quality.Quality.Name,
 					added:           ef.DateAdded,
 					ref:             fileRef{path: ef.Path, size: ef.Size},
@@ -337,7 +335,6 @@ func collectArrFiles(arrs []*arrSource) []*arrFile {
 				arrType:         inst.Type,
 				fileID:          m.MovieFile.ID,
 				itemID:          movieID(inst.ID, m.ID),
-				itemTitle:       m.Title,
 				quality:         m.MovieFile.Quality.Quality.Name,
 				added:           m.MovieFile.DateAdded,
 				ref:             fileRef{path: m.MovieFile.Path, size: m.MovieFile.Size},

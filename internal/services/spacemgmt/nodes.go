@@ -4,7 +4,6 @@
 package spacemgmt
 
 import (
-	"encoding/base64"
 	"net/url"
 	"slices"
 	"strconv"
@@ -125,9 +124,11 @@ func (b *nodeBuilder) addOrphanTorrents(groups [][]linkedTorrent) {
 	}
 }
 
-// addOrphanFiles adds the library files that share no identity with a torrent
-// file. A file qui could not read is left out, since nothing says it is unseeded.
-func (b *nodeBuilder) addOrphanFiles(library []*arrFile, entries []*torrentEntry) {
+// unseededLibraryBytes sums the library files that share no identity with a
+// torrent file. These files already sit in their season or movie node, so no
+// orphanFile node is emitted for them. A file qui could not read is left out,
+// since nothing says it is unseeded.
+func unseededLibraryBytes(library []*arrFile, entries []*torrentEntry) int64 {
 	seeded := make(map[fsops.FileKey]struct{})
 	for _, e := range entries {
 		for _, f := range e.files {
@@ -136,6 +137,8 @@ func (b *nodeBuilder) addOrphanFiles(library []*arrFile, entries []*torrentEntry
 			}
 		}
 	}
+	var total int64
+	counted := make(map[fsops.FileKey]struct{})
 	for _, f := range library {
 		if !f.ref.hasKey {
 			continue
@@ -143,17 +146,13 @@ func (b *nodeBuilder) addOrphanFiles(library []*arrFile, entries []*torrentEntry
 		if _, ok := seeded[f.ref.key]; ok {
 			continue
 		}
-		id := "orphan:file:" + base64.RawURLEncoding.EncodeToString([]byte(f.ref.path))
-		if _, dup := b.snap.byID[id]; dup {
+		if _, ok := counted[f.ref.key]; ok {
 			continue
 		}
-		n := b.leaf(id, KindOrphanFile, f.itemTitle+" - "+baseOf(f.ref.path), []*arrFile{f}, nil)
-		n.ArrInstanceID = f.arrInstanceID
-		n.ArrInstanceName = f.arrInstanceName
-		n.ArrType = string(f.arrType)
-		b.snap.totals.OrphanFileBytes += n.SizeBytes
-		b.add(n)
+		counted[f.ref.key] = struct{}{}
+		total += f.ref.size
 	}
+	return total
 }
 
 // leaf builds a season, movie, or orphan node from its library files and torrents.

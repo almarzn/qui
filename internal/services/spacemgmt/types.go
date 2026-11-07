@@ -139,4 +139,8 @@ type DeleteAction struct {
 	Target string `json:"target"`
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
+	// IsCrossSeed and Tracker are set on deleteTorrent actions only, so the
+	// dialog can tell a main torrent from its same-named cross-seeds.
+	IsCrossSeed *bool  `json:"isCrossSeed,omitempty"`
+	Tracker     string `json:"tracker,omitempty"`
 }

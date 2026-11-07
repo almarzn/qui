@@ -73,22 +73,30 @@ func TestServiceBuildsTreeThroughRemotePathMapping(t *testing.T) {
 	libFile := filepath.Join(libDir, "e1.mkv")
 	require.NoError(t, os.WriteFile(dlFile, []byte("episode-data"), 0o600))
 	require.NoError(t, os.Link(dlFile, libFile))
+	// Season 2 is in the library but no torrent seeds it.
+	unseededDir := filepath.Join(root, "tv", "Example Show", "Season 02")
+	require.NoError(t, os.MkdirAll(unseededDir, 0o750))
+	unseededFile := filepath.Join(unseededDir, "e1.mkv")
+	require.NoError(t, os.WriteFile(unseededFile, []byte("seven!!"), 0o600))
 
 	var deletedFiles []string
 	arr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body any
 		switch r.Method + " " + r.URL.Path {
 		case "GET /api/v3/series":
-			body = []map[string]any{{"id": 7, "title": "Example Show", "year": 2020, "path": filepath.Join(root, "tv", "Example Show"), "statistics": map[string]any{"episodeFileCount": 1}}}
+			body = []map[string]any{{"id": 7, "title": "Example Show", "year": 2020, "path": filepath.Join(root, "tv", "Example Show"), "statistics": map[string]any{"episodeFileCount": 2}}}
 		case "GET /api/v3/episodefile":
-			body = []map[string]any{{"id": 70, "seriesId": 7, "seasonNumber": 1, "path": libFile, "size": 12, "quality": map[string]any{"quality": map[string]any{"name": "WEBDL-1080p"}}}}
+			body = []map[string]any{
+				{"id": 70, "seriesId": 7, "seasonNumber": 1, "path": libFile, "size": 12, "quality": map[string]any{"quality": map[string]any{"name": "WEBDL-1080p"}}},
+				{"id": 71, "seriesId": 7, "seasonNumber": 2, "path": unseededFile, "size": 7},
+			}
 		case "GET /api/v3/history":
 			body = map[string]any{"totalRecords": 1, "records": []map[string]any{{"downloadId": "ABCD", "seriesId": 7, "episode": map[string]any{"seasonNumber": 1}}}}
 		case "GET /api/v3/remotepathmapping":
 			body = []map[string]any{{"host": "qbittorrent", "remotePath": "/downloads/", "localPath": downloads + string(filepath.Separator)}}
 		case "GET /api/v3/rootfolder", "GET /api/v3/diskspace":
 			body = []any{}
-		case "DELETE /api/v3/episodefile/70":
+		case "DELETE /api/v3/episodefile/70", "DELETE /api/v3/episodefile/71":
 			deletedFiles = append(deletedFiles, r.URL.Path)
 			body = map[string]any{}
 		default:
@@ -121,11 +129,20 @@ func TestServiceBuildsTreeThroughRemotePathMapping(t *testing.T) {
 
 	tree, err := svc.Tree(t.Context(), false)
 	require.NoError(t, err)
+	// The unseeded library file stays in its season; no orphanFile node repeats it.
 	require.Len(t, tree.Nodes, 2)
+	for _, n := range tree.Nodes {
+		require.NotEqual(t, KindOrphanFile, n.Kind)
+	}
 
 	series := tree.Nodes[0]
 	require.Equal(t, "sonarr:3:series:7", series.ID)
-	require.Len(t, series.Children, 1)
+	require.Len(t, series.Children, 2)
+	unseeded := series.Children[1]
+	require.Equal(t, "sonarr:3:season:7:2", unseeded.ID)
+	require.Empty(t, unseeded.Torrents)
+	require.Len(t, unseeded.Files, 1)
+	require.Equal(t, unseededFile, unseeded.Files[0].LibraryPath)
 	season := series.Children[0]
 	require.Equal(t, "sonarr:3:season:7:1", season.ID)
 	require.Equal(t, "WEBDL-1080p", season.Quality)
@@ -140,7 +157,7 @@ func TestServiceBuildsTreeThroughRemotePathMapping(t *testing.T) {
 	require.Equal(t, uint64(2), *season.Files[0].LinkCount)
 	require.True(t, season.ReclaimableKnown)
 	require.Equal(t, int64(12), season.ReclaimableBytes)
-	require.Equal(t, int64(12), series.SizeBytes)
+	require.Equal(t, int64(19), series.SizeBytes)
 	require.InDelta(t, 2.0, season.Stats.Ratio, 0.001)
 
 	// The unrelated file does not exist on disk, so its torrent is an orphan of unknown size freed.
@@ -150,16 +167,22 @@ func TestServiceBuildsTreeThroughRemotePathMapping(t *testing.T) {
 
 	overview, err := svc.Overview(t.Context())
 	require.NoError(t, err)
-	require.Equal(t, int64(12), overview.Totals.TrackedBytes)
-	require.Equal(t, int64(12), overview.Totals.ReclaimableBytes)
+	require.Equal(t, int64(19), overview.Totals.TrackedBytes)
+	require.Equal(t, int64(19), overview.Totals.ReclaimableBytes)
+	require.Equal(t, int64(7), overview.Totals.OrphanFileBytes)
 
 	resp, err := svc.Delete(t.Context(), DeleteRequest{NodeIDs: []string{series.ID}, DeleteTorrents: true, DeleteCrossSeeds: true, DeleteArrFiles: true})
 	require.NoError(t, err)
-	require.Equal(t, int64(12), resp.ReclaimableBytes)
-	require.Len(t, resp.Actions, 2)
+	require.Equal(t, int64(19), resp.ReclaimableBytes)
+	require.Len(t, resp.Actions, 3)
 	for _, a := range resp.Actions {
 		require.Equal(t, StatusOK, a.Status, a.Error)
 	}
+	require.Equal(t, ActionDeleteTorrent, resp.Actions[0].Type)
+	require.Equal(t, "tracker.example", resp.Actions[0].Tracker)
+	require.NotNil(t, resp.Actions[0].IsCrossSeed)
+	require.False(t, *resp.Actions[0].IsCrossSeed)
+	require.Nil(t, resp.Actions[1].IsCrossSeed, "arr file actions carry no torrent fields")
 	require.Equal(t, map[int][]string{1: {"abcd"}}, torrents.deleted)
-	require.Equal(t, []string{"/api/v3/episodefile/70"}, deletedFiles)
+	require.Equal(t, []string{"/api/v3/episodefile/70", "/api/v3/episodefile/71"}, deletedFiles)
 }

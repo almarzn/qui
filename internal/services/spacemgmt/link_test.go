@@ -125,6 +125,8 @@ func TestReclaimable(t *testing.T) {
 func TestPlanDeleteReclaimable(t *testing.T) {
 	main := entry(1, "aaaa", 100, "/dl/Example.Show.S02", keyed(t, "/dl/Example.Show.S02/e1.mkv", 1, 3, 100))
 	cross := entry(2, "bbbb", 200, "/xs/Example.Show.S02", keyed(t, "/xs/Example.Show.S02/e1.mkv", 1, 3, 100))
+	main.torrent.Tracker = "https://main.example:8443/announce"
+	cross.torrent.Tracker = "udp://cross.example:6969/announce"
 	lib := &arrFile{arrInstanceID: 3, fileID: 11, ref: keyed(t, "/lib/Example Show/Season 02/e1.mkv", 1, 3, 100)}
 	node := &Node{ID: "sonarr:3:season:5:2", plan: nodePlan{
 		torrents: []plannedTorrent{{key: main.key()}, {key: cross.key(), isCrossSeed: true}},
@@ -157,6 +159,16 @@ func TestPlanDeleteReclaimable(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("torrent actions tell the main from its cross-seed", func(t *testing.T) {
+		plan, err := snap.planDelete(DeleteRequest{NodeIDs: []string{node.ID}, DeleteTorrents: true, DeleteCrossSeeds: true})
+		require.NoError(t, err)
+		require.Len(t, plan.resp.Actions, 2)
+		require.Equal(t, "main.example", plan.resp.Actions[0].Tracker)
+		require.False(t, *plan.resp.Actions[0].IsCrossSeed)
+		require.Equal(t, "cross.example", plan.resp.Actions[1].Tracker)
+		require.True(t, *plan.resp.Actions[1].IsCrossSeed)
+	})
 
 	_, err := snap.planDelete(DeleteRequest{NodeIDs: []string{"radarr:1:movie:404"}})
 	require.ErrorIs(t, err, ErrUnknownNode)
