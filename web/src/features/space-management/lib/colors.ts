@@ -18,16 +18,20 @@ export const SEEDING_COLORS: Record<SeedingState, string> = {
 }
 
 export const DISK_SEGMENT_COLORS: Record<DiskSegmentKey, string> = {
-  seeded: "var(--primary)",
+  seeded: "var(--ratio-good)",
   notSeeded: "var(--ratio-bad)",
   orphanTorrents: "var(--ratio-almost)",
   otherUsed: "color-mix(in oklch, var(--muted-foreground) 45%, transparent)",
   free: "var(--muted)",
 }
 
-/** Tints a token for a block background while keeping the foreground text readable. */
+/**
+ * Tints a token for a block background while keeping the foreground text readable.
+ * Mixes in oklab: an achromatic --card such as oklch(1 0 0) carries hue 0, and an
+ * oklch mix would drag a green hue toward orange.
+ */
 export function tint(color: string, percent: number): string {
-  return `color-mix(in oklch, ${color} ${percent}%, var(--card))`
+  return `color-mix(in oklab, ${color} ${percent}%, var(--card))`
 }
 
 export const SEEDING_STATE_KEYS: Record<SeedingState, string> = {
