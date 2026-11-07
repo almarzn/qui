@@ -20,7 +20,8 @@ import { SpaceNodeDetails } from "./SpaceNodeDetails"
 
 // checkbox+title | instance | quality | added | size | reclaimable | up | down | ratio | seed time | last activity
 const GRID_COLUMNS = "minmax(280px,1fr) 130px 120px 100px 90px 110px 90px 90px 60px 100px 110px"
-const MIN_WIDTH = "min-w-[1280px]"
+// Column widths (1280px) + 10 gaps (80px) + row padding (24px)
+const MIN_WIDTH = "min-w-[1384px]"
 const ROW_HEIGHT = 40
 
 const SECTION_KEYS: Record<SpaceSection, string> = {
@@ -47,7 +48,7 @@ function HeaderRow({ allCheckState, onToggleAll }: Pick<SpaceTreeViewProps, "all
   const { t } = useTranslation("spaceManagement")
   return (
     <div
-      className="sticky top-0 z-10 grid items-center gap-2 border-b bg-card px-3 py-2 text-xs font-medium text-muted-foreground"
+      className="sticky top-0 z-10 grid items-center gap-2 whitespace-nowrap border-b bg-card px-3 py-2 text-xs font-medium text-muted-foreground"
       style={{ gridTemplateColumns: GRID_COLUMNS }}
     >
       <div className="flex items-center gap-2 pl-6">
@@ -90,7 +91,7 @@ const NodeRow = memo(function NodeRow({ node, depth, hasChildren, expanded, chec
   return (
     <>
       <div
-        className="grid items-center gap-2 px-3 text-sm hover:bg-muted/40"
+        className="grid items-center gap-2 whitespace-nowrap px-3 text-sm hover:bg-muted/40"
         style={{ gridTemplateColumns: GRID_COLUMNS, minHeight: ROW_HEIGHT }}
       >
         <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: depth * 20 }}>
