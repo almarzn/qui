@@ -192,6 +192,10 @@ describe("flattenTree", () => {
     expect(rows.map(r => r.id)).toEqual(["section:library", "series", "s1", "s2", "movie", "section:orphans", "orphan"])
     const movieRow = rows[4]
     expect(movieRow.type === "node" && movieRow.expanded).toBe(false)
+    // Seasons start where the previous season ends; top-level rows start at zero.
+    const offsets = rows.flatMap(r => r.type === "node" ? [[r.id, r.offsetBytes]] : [])
+    const s1 = series.children![0]
+    expect(offsets).toEqual([["series", 0], ["s1", 0], ["s2", s1.sizeBytes], ["movie", 0], ["orphan", 0]])
   })
 
   it("hides the nodes of a collapsed section", () => {
@@ -202,9 +206,12 @@ describe("flattenTree", () => {
 
 describe("sizeBar", () => {
   it("sizes the bar to the largest item and the solid part to the reclaimable bytes", () => {
-    expect(sizeBar(movie, 1000)).toEqual({ totalPct: 50, reclaimablePct: 10 })
-    expect(sizeBar(movie, 0)).toEqual({ totalPct: 0, reclaimablePct: 0 })
-    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ totalPct: 100, reclaimablePct: 100 })
+    expect(sizeBar(movie, 1000)).toEqual({ offsetPct: 0, totalPct: 50, reclaimablePct: 10 })
+    expect(sizeBar(movie, 0)).toEqual({ offsetPct: 0, totalPct: 0, reclaimablePct: 0 })
+    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ offsetPct: 0, totalPct: 100, reclaimablePct: 100 })
+    // A bar that starts after its siblings is clamped to the end of the track.
+    expect(sizeBar(movie, 1000, 300)).toEqual({ offsetPct: 30, totalPct: 50, reclaimablePct: 10 })
+    expect(sizeBar(movie, 1000, 800)).toEqual({ offsetPct: 80, totalPct: 20, reclaimablePct: 10 })
   })
 })
 

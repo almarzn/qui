@@ -161,9 +161,13 @@ export function partitionNodes(nodes: SpaceNode[]): Record<SpaceSection, SpaceNo
 
 export type SpaceRow =
   | { type: "section"; id: string; section: SpaceSection; count: number; sizeBytes: number; collapsed: boolean }
-  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean }
+  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean; offsetBytes: number }
 
-/** Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons. */
+/**
+ * Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons.
+ * A child's offsetBytes is where its bar starts: the parent's offset plus the sizes of the
+ * siblings above it, so the seasons' bars line up end to end under the series bar.
+ */
 export function flattenTree(
   sections: Record<SpaceSection, SpaceNode[]>,
   expanded: ReadonlySet<string>,
@@ -171,12 +175,16 @@ export function flattenTree(
 ): SpaceRow[] {
   const rows: SpaceRow[] = []
 
-  const pushNode = (node: SpaceNode, depth: number) => {
+  const pushNode = (node: SpaceNode, depth: number, offsetBytes: number) => {
     const hasChildren = (node.children?.length ?? 0) > 0
     const isExpanded = hasChildren && expanded.has(node.id)
-    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded })
+    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded, offsetBytes })
     if (isExpanded) {
-      for (const child of node.children ?? []) pushNode(child, depth + 1)
+      let childOffset = offsetBytes
+      for (const child of node.children ?? []) {
+        pushNode(child, depth + 1, childOffset)
+        childOffset += child.sizeBytes
+      }
     }
   }
 
@@ -193,7 +201,7 @@ export function flattenTree(
       collapsed,
     })
     if (!collapsed) {
-      for (const node of nodes) pushNode(node, 0)
+      for (const node of nodes) pushNode(node, 0, 0)
     }
   }
 
@@ -201,18 +209,21 @@ export function flattenTree(
 }
 
 export interface SizeBar {
+  /** Where the bar starts, in percent of the largest item. */
+  offsetPct: number
   /** Width of the whole bar, in percent of the largest item. */
   totalPct: number
   /** Width of the reclaimable part, in percent of the largest item. */
   reclaimablePct: number
 }
 
-/** Bar widths for a node next to the largest visible item. */
-export function sizeBar(node: SpaceNode, maxBytes: number): SizeBar {
-  if (maxBytes <= 0 || node.sizeBytes <= 0) return { totalPct: 0, reclaimablePct: 0 }
-  const totalPct = Math.min(100, (node.sizeBytes / maxBytes) * 100)
+/** Bar position and widths for a node next to the largest visible item, starting at offsetBytes. */
+export function sizeBar(node: SpaceNode, maxBytes: number, offsetBytes = 0): SizeBar {
+  if (maxBytes <= 0 || node.sizeBytes <= 0) return { offsetPct: 0, totalPct: 0, reclaimablePct: 0 }
+  const offsetPct = Math.min(100, (Math.max(0, offsetBytes) / maxBytes) * 100)
+  const totalPct = Math.min(100 - offsetPct, (node.sizeBytes / maxBytes) * 100)
   const reclaimable = Math.min(node.reclaimableBytes, node.sizeBytes)
-  return { totalPct, reclaimablePct: (Math.max(0, reclaimable) / maxBytes) * 100 }
+  return { offsetPct, totalPct, reclaimablePct: Math.min(totalPct, (Math.max(0, reclaimable) / maxBytes) * 100) }
 }
 
 // Selection holds leaf ids only (seasons, movies, orphans, and a series without seasons).

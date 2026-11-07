@@ -46,9 +46,9 @@ export interface SpaceListViewProps {
   onOpen: (node: SpaceNode) => void
 }
 
-function SizeBarCell({ node, maxBytes, color }: { node: SpaceNode; maxBytes: number; color: string }) {
+function SizeBarCell({ node, maxBytes, offsetBytes, color }: { node: SpaceNode; maxBytes: number; offsetBytes: number; color: string }) {
   const { t } = useTranslation("spaceManagement")
-  const bar = sizeBar(node, maxBytes)
+  const bar = sizeBar(node, maxBytes, offsetBytes)
   const display = reclaimableDisplay(node.reclaimableBytes, node.reclaimableKnown)
   const reclaimable = display.kind === "known"
     ? formatBytes(display.bytes)
@@ -60,14 +60,15 @@ function SizeBarCell({ node, maxBytes, color }: { node: SpaceNode; maxBytes: num
         <div className="relative h-3 w-full overflow-hidden rounded-sm bg-muted/40">
           {/* Kept by other links: hatched and light. */}
           <div
-            className="absolute inset-y-0 left-0 rounded-sm"
+            className="absolute inset-y-0 rounded-sm"
             style={{
+              left: `${bar.offsetPct}%`,
               width: `${bar.totalPct}%`,
               background: `repeating-linear-gradient(135deg, ${tint(color, 45)} 0 3px, ${tint(color, 15)} 3px 6px)`,
             }}
           />
           {/* Freed by a delete: solid. */}
-          <div className="absolute inset-y-0 left-0 rounded-sm" style={{ width: `${bar.reclaimablePct}%`, background: color }} />
+          <div className="absolute inset-y-0 rounded-sm" style={{ left: `${bar.offsetPct}%`, width: `${bar.reclaimablePct}%`, background: color }} />
         </div>
       </TooltipTrigger>
       <TooltipContent>{t("list.barTooltip", { reclaimable, size: formatBytes(node.sizeBytes) })}</TooltipContent>
@@ -78,6 +79,7 @@ function SizeBarCell({ node, maxBytes, color }: { node: SpaceNode; maxBytes: num
 interface NodeRowProps {
   node: SpaceNode
   depth: number
+  offsetBytes: number
   hasChildren: boolean
   expanded: boolean
   checkState: SpaceCheckState
@@ -88,7 +90,7 @@ interface NodeRowProps {
   onOpen: (node: SpaceNode) => void
 }
 
-const NodeRow = memo(function NodeRow({ node, depth, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
+const NodeRow = memo(function NodeRow({ node, depth, offsetBytes, hasChildren, expanded, checkState, maxBytes, nowMs, onToggleSelect, onToggleExpand, onOpen }: NodeRowProps) {
   const { t } = useTranslation("spaceManagement")
   const state = seedingState(node, nowMs)
 
@@ -129,7 +131,7 @@ const NodeRow = memo(function NodeRow({ node, depth, hasChildren, expanded, chec
           {node.year ? <span className="text-muted-foreground"> {node.year}</span> : null}
         </button>
       </div>
-      <SizeBarCell node={node} maxBytes={maxBytes} color={SEEDING_COLORS[state]} />
+      <SizeBarCell node={node} maxBytes={maxBytes} offsetBytes={offsetBytes} color={SEEDING_COLORS[state]} />
       <div className="text-right text-xs tabular-nums">{formatBytes(node.sizeBytes)}</div>
       <div><SeedingBadge node={node} state={state} /></div>
       <div><CrossSeedBadge node={node} /></div>
@@ -201,6 +203,7 @@ export function SpaceListView({ rows, maxBytes, nowMs, selected, allCheckState, 
                 <NodeRow
                   node={row.node}
                   depth={row.depth}
+                  offsetBytes={row.offsetBytes}
                   hasChildren={row.hasChildren}
                   expanded={row.expanded}
                   checkState={nodeCheckState(row.node, selected)}
