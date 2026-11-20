@@ -163,7 +163,7 @@ func (s *Service) findAutobrrAnnouncementMatches(ctx context.Context, announcedN
 			matches = append(matches, boundAnnouncementMatch{
 				instanceID:   instance.ID,
 				instanceName: instance.Name,
-				torrent:      *torrent,
+				torrent:      torrent,
 				decision:     provenance.bindSource(instance.ID, torrent.Hash),
 			})
 		}
@@ -204,6 +204,10 @@ func validateWebhookCheckRequest(req *WebhookCheckRequest) error {
 	}
 	return nil
 }
+
+// nearMissDebugLimit is stated in
+// documentation/docs/features/cross-seed/troubleshooting.md.
+const nearMissDebugLimit = 5
 
 // CheckWebhook checks if a release announced by autobrr can be cross-seeded with existing torrents.
 // This endpoint is designed for autobrr webhook integration where autobrr sends parsed release metadata
@@ -283,6 +287,7 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 		matches          []WebhookCheckMatch
 		hasCompleteMatch bool
 		hasPendingMatch  bool
+		nearMisses       int
 	)
 
 	// A rejected torrent of the announced group is a near miss: log why, so a
@@ -301,7 +306,7 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 	// Start the file reads of all instances before the first wait, so a slow
 	// instance does not use up the wait of the others. The waits share one
 	// budget, so the check answers inside the time that autobrr waits. Each
-	// open check holds its own copy of a torrent list, so the check keeps the
+	// open check holds its own list of torrent views, so the check keeps the
 	// lists only when no instance waits for a file read.
 	pendingReads := make(map[int]*pendingLocalReads, len(instances))
 	views := make(map[int][]qbittorrent.CrossInstanceTorrentView, len(instances))
@@ -352,7 +357,7 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 		}
 
 		// Log webhook filter settings once per instance
-		log.Debug().
+		log.Trace().
 			Str("source", "cross-seed.webhook").
 			Int("instanceID", instance.ID).
 			Strs("includeCategories", settings.WebhookSourceCategories).
@@ -365,12 +370,14 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 		// Track filtering stats if we're logging them
 		var counts sourceFilterCounts
 
-		log.Debug().
+		log.Trace().
 			Str("source", "cross-seed.webhook").
 			Int("instanceId", instance.ID).
 			Str("instanceName", instance.Name).
 			Int("torrentCount", len(torrentsView)).
 			Msg("Webhook check: scanning instance torrents for metadata matches")
+
+		logNearMisses := announcedGroup != "" && log.Debug().Enabled()
 
 		// Check each torrent for a match - iterate directly over torrentsView to avoid copying
 		for _, torrentView := range torrentsView {
@@ -401,14 +408,19 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 				sourceReads:            sourceReads,
 			})
 			if !decision.Accepted {
-				if evt := log.Debug(); evt.Enabled() && announcedGroup != "" {
+				if logNearMisses {
 					source := namedRelease{release: s.releaseCache.Parse(torrent.Name), rawName: torrent.Name}
 					// Only a name with a site can be the split side, and the other
 					// side must have none.
 					if m.normalizedGroupSiteIdentity(source.release) == announcedGroup ||
 						(source.release.Site != "") != (announcedCandidate.release.Site != "") &&
 							m.crossFieldGroupSiteFallback(source, announcedCandidate) {
-						evt.
+						event := log.Trace()
+						if nearMisses < nearMissDebugLimit {
+							event = log.Debug()
+						}
+						nearMisses++
+						event.
 							Str("source", "cross-seed.webhook").
 							Int("instanceId", instance.ID).
 							Str("incomingName", req.TorrentName).
@@ -464,6 +476,7 @@ func (s *Service) CheckWebhook(ctx context.Context, req *WebhookCheckRequest) (*
 		Ints("targetInstanceIds", targetInstanceIDs).
 		Str("torrentName", req.TorrentName).
 		Int("matchCount", len(matches)).
+		Int("nearMisses", nearMisses).
 		Bool("canCrossSeed", canCrossSeed).
 		Str("recommendation", recommendation).
 		Msg("Webhook check completed")

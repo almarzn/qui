@@ -38,8 +38,12 @@ type fakeTorrents struct {
 	deleted  map[int][]string
 }
 
-func (f *fakeTorrents) GetAllTorrents(_ context.Context, id int) ([]qbt.Torrent, error) {
-	return f.torrents[id], nil
+func (f *fakeTorrents) GetAllTorrentRefs(_ context.Context, id int) ([]*qbt.Torrent, error) {
+	refs := make([]*qbt.Torrent, len(f.torrents[id]))
+	for i := range f.torrents[id] {
+		refs[i] = &f.torrents[id][i]
+	}
+	return refs, nil
 }
 
 func (f *fakeTorrents) GetTorrentFilesBatch(context.Context, int, []string) (map[string]qbt.TorrentFiles, error) {

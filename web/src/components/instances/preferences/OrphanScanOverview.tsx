@@ -95,7 +95,7 @@ export function OrphanScanRunItem({ run }: { run: OrphanScanRun }) {
           </Badge>
           {hasWarning && (
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger asChild openOnTap>
                 <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
               </TooltipTrigger>
               <TooltipContent>
@@ -255,14 +255,14 @@ function InstanceOrphanScanItem({
         <div className="px-6 py-4 flex items-center justify-between opacity-60">
           <div className="flex items-center gap-3">
             <span className="font-medium">{instance.name}</span>
-            <Badge variant="outline" className="text-xs">{t("preferences.orphanScanOverview.noLocalAccess")}</Badge>
+            <Badge variant="outline" className="text-xs">{t("preferences.orphanScanOverview.noFilesystemAccess")}</Badge>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <AlertTriangle className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="max-w-[250px]">
-              <p>{t("preferences.orphanScanOverview.noLocalAccessTooltip")}</p>
+              <p>{t("preferences.orphanScanOverview.noFilesystemAccessTooltip")}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -292,7 +292,7 @@ function InstanceOrphanScanItem({
               )}
               {latestRun?.status === "completed" && latestRun.errorMessage && !latestRun.partial && (
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger asChild openOnTap>
                     <AlertTriangle className="h-4 w-4 text-yellow-500" />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -525,7 +525,7 @@ export function OrphanScanOverview({
 
   return (
     <Card>
-      <CardHeader className="space-y-2">
+      <CardHeader>
         <div className="flex items-center gap-2">
           <CardTitle>{t("preferences.orphanScanOverview.title")}</CardTitle>
           <Tooltip>

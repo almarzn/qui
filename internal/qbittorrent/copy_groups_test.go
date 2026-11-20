@@ -56,6 +56,13 @@ func newCopyGroupFixture(t *testing.T) copyGroupFixture {
 			copyGroupTorrent("a1", "Kaiju.Squad.S01.1080p.WEB-DL-GRPA", 400, 99, "t4.example.invalid"),
 		},
 	}
+	sizes := map[string]int64{"a1": 1000, "b1": 1000, "c1": 1000, "d1": 300, "e1": 50, "f1": 50}
+	for _, library := range libraries {
+		for i := range library {
+			library[i].Size = sizes[library[i].Hash]
+		}
+	}
+	libraries["a"][3].State = qbt.TorrentStateStalledUp
 	okTrackers := func(int) []qbt.TorrentTracker { return nil }
 
 	f := copyGroupFixture{names: map[int]string{}}
@@ -79,7 +86,7 @@ func (f copyGroupFixture) groups(read ...int) *CopyGroups {
 	return NewCopyGroups(map[int]map[string]uint64{
 		f.a: {"a1": copyGroupKaiju, "b1": copyGroupKaiju, "c1": copyGroupKaiju, "e1": copyGroupAlbum, "f1": copyGroupAlbum},
 		f.b: {"a1": copyGroupKaiju},
-	}, read)
+	}, nil, read)
 }
 
 func (f copyGroupFixture) row(instanceID int, view *TorrentView) string {
@@ -118,12 +125,12 @@ func TestListWithoutGroupCopiesIgnoresTheMap(t *testing.T) {
 	f := newCopyGroupFixture(t)
 	f.sm.SetCopyGroups(f.groups(f.a, f.b))
 
-	single, err := f.sm.GetTorrentsWithFilters(t.Context(), f.a, 0, 0, "upspeed", "desc", "", FilterOptions{})
+	single, err := f.sm.ListTorrents(t.Context(), TorrentListView{InstanceID: f.a, Sort: "upspeed", Order: "desc"})
 	require.NoError(t, err)
 	require.Equal(t, []string{"b1", "d1", "f1", "a1", "c1", "e1"}, f.rows(single.Torrents))
 	require.Nil(t, single.CopyGroupsReady)
 
-	unified, err := f.sm.GetCrossInstanceTorrentsWithFilters(t.Context(), 0, 0, "upspeed", "desc", "", FilterOptions{}, nil)
+	unified, err := f.sm.ListTorrents(t.Context(), TorrentListView{Unified: true, Sort: "upspeed", Order: "desc"})
 	require.NoError(t, err)
 	require.Equal(t, []string{"b/a1", "a/b1", "a/d1", "a/f1", "a/a1", "a/c1", "a/e1"}, f.crossRows(unified.CrossInstanceTorrents))
 	require.Nil(t, unified.CopyGroupsReady)
@@ -141,7 +148,6 @@ func TestGroupCopiesInstanceView(t *testing.T) {
 
 	f := newCopyGroupFixture(t)
 	f.sm.SetCopyGroups(f.groups(f.a, f.b))
-	ctx := WithGroupCopies(t.Context())
 
 	tests := []struct {
 		name          string
@@ -206,7 +212,7 @@ func TestGroupCopiesInstanceView(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			response, err := f.sm.GetTorrentsWithFilters(ctx, f.a, tt.limit, tt.offset, "upspeed", tt.order, "", tt.filters)
+			response, err := f.sm.ListTorrents(t.Context(), TorrentListView{InstanceID: f.a, Limit: tt.limit, Offset: tt.offset, Sort: "upspeed", Order: tt.order, Filters: tt.filters, CopyGroups: true})
 			require.NoError(t, err)
 			require.Equal(t, tt.want, f.rows(response.Torrents))
 			require.Equal(t, tt.wantTotal, response.Total)
@@ -221,12 +227,11 @@ func TestGroupCopiesHoldViewParity(t *testing.T) {
 
 	f := newCopyGroupFixture(t)
 	f.sm.SetCopyGroups(f.groups(f.a, f.b))
-	ctx := WithGroupCopies(t.Context())
 
 	for _, order := range []string{"asc", "desc"} {
-		single, err := f.sm.GetTorrentsWithFilters(ctx, f.a, 0, 0, "upspeed", order, "", FilterOptions{})
+		single, err := f.sm.ListTorrents(t.Context(), TorrentListView{InstanceID: f.a, Sort: "upspeed", Order: order, CopyGroups: true})
 		require.NoError(t, err)
-		scoped, err := f.sm.GetCrossInstanceTorrentsWithFilters(ctx, 0, 0, "upspeed", order, "", FilterOptions{}, []int{f.a})
+		scoped, err := f.sm.ListTorrents(t.Context(), TorrentListView{Unified: true, InstanceIDs: []int{f.a}, Sort: "upspeed", Order: order, CopyGroups: true})
 		require.NoError(t, err)
 
 		scopedRows := make([]TorrentView, 0, len(scoped.CrossInstanceTorrents))
@@ -244,11 +249,10 @@ func TestGroupCopiesUnifiedView(t *testing.T) {
 	t.Parallel()
 
 	f := newCopyGroupFixture(t)
-	ctx := WithGroupCopies(t.Context())
 
 	t.Run("a hash on two instances whose younger copy sorts first", func(t *testing.T) {
 		f.sm.SetCopyGroups(f.groups(f.a, f.b))
-		response, err := f.sm.GetCrossInstanceTorrentsWithFilters(ctx, 0, 0, "upspeed", "desc", "", FilterOptions{}, nil)
+		response, err := f.sm.ListTorrents(t.Context(), TorrentListView{Unified: true, Sort: "upspeed", Order: "desc", CopyGroups: true})
 		require.NoError(t, err)
 		require.Equal(t, []string{
 			"a/a1 00000000000000aa first=b/a1", "b/a1 00000000000000aa", "a/b1 00000000000000aa", "a/c1 00000000000000aa",
@@ -261,7 +265,7 @@ func TestGroupCopiesUnifiedView(t *testing.T) {
 
 	t.Run("the rows of an instance outside the record stay flat", func(t *testing.T) {
 		f.sm.SetCopyGroups(f.groups(f.a))
-		response, err := f.sm.GetCrossInstanceTorrentsWithFilters(ctx, 0, 0, "upspeed", "desc", "", FilterOptions{}, nil)
+		response, err := f.sm.ListTorrents(t.Context(), TorrentListView{Unified: true, Sort: "upspeed", Order: "desc", CopyGroups: true})
 		require.NoError(t, err)
 		require.Equal(t, []string{
 			"b/a1",
@@ -284,18 +288,17 @@ func TestGroupCopiesReady(t *testing.T) {
 	unsynced := instance.ID
 	f.sm.clientPool.clients[unsynced] = &Client{}
 	f.sm.clientPool.failureTracker = map[int]*failureInfo{unsynced: {nextRetry: time.Now().Add(time.Hour)}}
-	ctx := WithGroupCopies(WithSkipFreshData(t.Context()))
 
 	flatA := []string{"b1", "d1", "f1", "a1", "c1", "e1"}
 
 	t.Run("no map gives the flat rows", func(t *testing.T) {
 		sm := NewSyncManager(f.sm.clientPool, nil)
-		response, err := sm.GetTorrentsWithFilters(ctx, f.a, 0, 0, "upspeed", "desc", "", FilterOptions{})
+		response, err := sm.ListTorrents(t.Context(), TorrentListView{InstanceID: f.a, Sort: "upspeed", Order: "desc", CopyGroups: true, CacheOnly: true})
 		require.NoError(t, err)
 		require.Equal(t, flatA, f.rows(response.Torrents))
 		require.Equal(t, new(false), response.CopyGroupsReady)
 
-		unified, err := sm.GetCrossInstanceTorrentsWithFilters(ctx, 0, 0, "upspeed", "desc", "", FilterOptions{}, []int{unsynced})
+		unified, err := sm.ListTorrents(t.Context(), TorrentListView{Unified: true, InstanceIDs: []int{unsynced}, Sort: "upspeed", Order: "desc", CopyGroups: true, CacheOnly: true})
 		require.NoError(t, err)
 		require.Equal(t, new(false), unified.CopyGroupsReady)
 	})
@@ -316,7 +319,7 @@ func TestGroupCopiesReady(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sm := NewSyncManager(f.sm.clientPool, nil)
 			sm.SetCopyGroups(f.groups(tt.read...))
-			response, err := sm.GetCrossInstanceTorrentsWithFilters(ctx, 0, 0, "upspeed", "desc", "", FilterOptions{}, tt.instances)
+			response, err := sm.ListTorrents(t.Context(), TorrentListView{Unified: true, InstanceIDs: tt.instances, Sort: "upspeed", Order: "desc", CopyGroups: true, CacheOnly: true})
 			require.NoError(t, err)
 			require.Equal(t, new(tt.want), response.CopyGroupsReady)
 		})
@@ -325,11 +328,114 @@ func TestGroupCopiesReady(t *testing.T) {
 	t.Run("an instance view outside the record gives the flat rows", func(t *testing.T) {
 		sm := NewSyncManager(f.sm.clientPool, nil)
 		sm.SetCopyGroups(f.groups(f.b))
-		response, err := sm.GetTorrentsWithFilters(ctx, f.a, 0, 0, "upspeed", "desc", "", FilterOptions{})
+		response, err := sm.ListTorrents(t.Context(), TorrentListView{InstanceID: f.a, Sort: "upspeed", Order: "desc", CopyGroups: true, CacheOnly: true})
 		require.NoError(t, err)
 		require.Equal(t, flatA, f.rows(response.Torrents))
 		require.Equal(t, new(false), response.CopyGroupsReady)
 	})
+}
+
+func TestCopyGroupsUniqueSize(t *testing.T) {
+	t.Parallel()
+
+	torrent := func(hash string, size int64) qbt.Torrent {
+		return qbt.Torrent{Hash: hash, Size: size, State: qbt.TorrentStateUploading}
+	}
+	stalledTorrent := func(hash string, size int64) qbt.Torrent {
+		t := torrent(hash, size)
+		t.State = qbt.TorrentStateStalledUp
+		return t
+	}
+	at := func(t qbt.Torrent, contentPath string) qbt.Torrent {
+		t.ContentPath = contentPath
+		return t
+	}
+	groups := NewCopyGroups(map[int]map[string]uint64{
+		1: {"a1": copyGroupKaiju, "b1": copyGroupKaiju, "c1": copyGroupKaiju},
+		2: {"a1": copyGroupKaiju},
+	}, map[int]map[string][]SharedPart{
+		// p1 holds all three episodes of a pack, and q1 holds two of them.
+		1: {"p1": {{ID: 7, Size: 900}, {ID: 8, Size: 100}}, "q1": {{ID: 7, Size: 900}}, "r1": {{ID: 7, Size: 900}, {ID: 8, Size: 100}}, "s1": {{ID: 7, Size: 900}, {ID: 9, Size: 200}}},
+	}, []int{1, 2})
+	sizes := func(instanceID int, torrents ...qbt.Torrent) *TorrentStats {
+		return (&SyncManager{}).calculateStats(torrentRefs(torrents), groups.uniqueSizes(instanceID))
+	}
+
+	tests := []struct {
+		name        string
+		torrents    []qbt.Torrent
+		want        int64
+		wantSeeding int64
+	}{
+		{name: "two copies in one instance count one time", torrents: []qbt.Torrent{torrent("a1", 1000), torrent("b1", 1000)}, want: 1000, wantSeeding: 1000},
+		{name: "a torrent outside a group counts in full", torrents: []qbt.Torrent{torrent("a1", 1000), torrent("b1", 1000), torrent("g1", 1000)}, want: 2000, wantSeeding: 2000},
+		{name: "a copy that skips files does not lower the size of its group", torrents: []qbt.Torrent{torrent("a1", 40), torrent("b1", 50), torrent("c1", 45)}, want: 50, wantSeeding: 50},
+		{name: "a stalled torrent is not seeding", torrents: []qbt.Torrent{torrent("a1", 1000), stalledTorrent("d1", 300)}, want: 1300, wantSeeding: 1000},
+		{name: "copies with a content path each count one time", torrents: []qbt.Torrent{at(torrent("a1", 1000), "/data/Rel"), at(torrent("b1", 1000), "/links/Rel")}, want: 1000, wantSeeding: 1000},
+		{name: "torrents without a content path share no data", torrents: []qbt.Torrent{torrent("y1", 300), torrent("z1", 300)}, want: 600, wantSeeding: 600},
+		{name: "a torrent outside a group with the content path of a member counts one time", torrents: []qbt.Torrent{at(torrent("a1", 1000), "/data/Rel"), at(torrent("y1", 1000), "/data/Rel")}, want: 1000, wantSeeding: 1000},
+		{name: "two torrents outside a group with one content path count one time", torrents: []qbt.Torrent{at(torrent("y1", 300), "/data/Film"), at(torrent("z1", 300), "/data/Film")}, want: 300, wantSeeding: 300},
+		// regression: #4020
+		{name: "a stalled member still joins its content path", torrents: []qbt.Torrent{at(torrent("a1", 1000), "/data/Rel"), at(stalledTorrent("b1", 1000), "/links/Rel"), at(torrent("y1", 1000), "/links/Rel")}, want: 1000, wantSeeding: 1000},
+		{name: "torrents that share some files count each Shared part one time", torrents: []qbt.Torrent{torrent("p1", 1000), torrent("q1", 900)}, want: 1000, wantSeeding: 1000},
+		{name: "a Shared part seeds when a torrent that seeds holds it", torrents: []qbt.Torrent{stalledTorrent("p1", 1000), torrent("q1", 900)}, want: 1000, wantSeeding: 900},
+		// regression: #4041
+		{name: "a torrent on the content path of a torrent with Shared parts counts one time", torrents: []qbt.Torrent{at(torrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack"), torrent("q1", 900)}, want: 1000, wantSeeding: 1000},
+		{name: "a torrent on that content path counts its bytes above the Shared parts", torrents: []qbt.Torrent{at(torrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1200), "/data/Pack")}, want: 1200, wantSeeding: 1200},
+		{name: "two torrents with the same Shared parts on that content path hold them one time", torrents: []qbt.Torrent{at(torrent("p1", 1000), "/data/Pack"), at(torrent("r1", 1000), "/data/Pack"), at(torrent("y1", 1200), "/data/Pack")}, want: 1200, wantSeeding: 1200},
+		{name: "a smaller torrent on that content path adds nothing", torrents: []qbt.Torrent{at(torrent("p1", 1000), "/data/Pack"), at(torrent("y1", 800), "/data/Pack")}, want: 1000, wantSeeding: 1000},
+		{name: "a torrent that seeds on that content path seeds the Shared parts", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack")}, want: 1000, wantSeeding: 1000},
+		{name: "a smaller torrent that seeds on that content path seeds only its own size", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 800), "/data/Pack")}, want: 1000, wantSeeding: 800},
+		{name: "a torrent that seeds on that content path does not count a part again that seeds", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack"), torrent("q1", 900)}, want: 1000, wantSeeding: 1000},
+		{name: "two content paths with the same Shared parts hold one set of data", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack"), at(stalledTorrent("r1", 1000), "/links/Pack"), at(torrent("z1", 1000), "/links/Pack")}, want: 1000, wantSeeding: 1000},
+		{name: "two content paths that share one part keep their other parts", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack"), at(stalledTorrent("s1", 1100), "/links/Pack"), at(torrent("z1", 1100), "/links/Pack")}, want: 1200, wantSeeding: 1200},
+		{name: "a torrent that seeds on one content path keeps the part that the other path does not hold", torrents: []qbt.Torrent{at(stalledTorrent("p1", 1000), "/data/Pack"), at(torrent("y1", 1000), "/data/Pack"), at(torrent("s1", 1100), "/links/Pack"), at(stalledTorrent("z1", 1100), "/links/Pack")}, want: 1200, wantSeeding: 1200},
+		{name: "a stalled torrent on that content path seeds nothing", torrents: []qbt.Torrent{at(stalledTorrent("q1", 900), "/links/Pack"), at(stalledTorrent("y1", 900), "/links/Pack")}, want: 900, wantSeeding: 0},
+		{name: "a group joins the torrents of its content paths", torrents: []qbt.Torrent{at(torrent("a1", 1000), "/data/Rel"), at(torrent("y1", 1000), "/links/Rel"), at(torrent("b1", 1000), "/links/Rel")}, want: 1000, wantSeeding: 1000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			stats := sizes(1, tt.torrents...)
+			require.Equal(t, new(tt.want), stats.UniqueSize)
+			require.Equal(t, new(tt.wantSeeding), stats.UniqueSeedingSize)
+		})
+	}
+
+	one := sizes(1, torrent("a1", 1000), torrent("b1", 1000))
+	two := sizes(2, torrent("a1", 1000))
+	require.Equal(t, int64(2000), *one.UniqueSize+*two.UniqueSize, "copies on two instances count two times")
+
+	require.Nil(t, sizes(3, torrent("a1", 1000)).UniqueSize, "an instance outside the record has no Unique size")
+	require.Nil(t, (*CopyGroups)(nil).uniqueSizes(1), "no map has no Unique size")
+}
+
+func TestUniqueSizeInstanceView(t *testing.T) {
+	t.Parallel()
+
+	f := newCopyGroupFixture(t)
+	f.sm.SetCopyGroups(f.groups(f.a))
+
+	stats := func(instanceID int, uniqueSize bool) *TorrentStats {
+		t.Helper()
+		response, err := f.sm.ListTorrents(t.Context(), TorrentListView{InstanceID: instanceID, NoRows: true, UniqueSize: uniqueSize, CacheOnly: true})
+		require.NoError(t, err)
+		return response.Stats
+	}
+
+	a := stats(f.a, true)
+	require.Equal(t, new(int64(1350)), a.UniqueSize, "each Copy group counts one time")
+	require.Equal(t, new(int64(1050)), a.UniqueSeedingSize, "a stalled torrent is not seeding")
+	require.Equal(t, int64(1000), a.TotalSize, "the content path rule stays")
+
+	b := stats(f.b, true)
+	require.Nil(t, b.UniqueSize, "no build read the instance yet")
+	require.Nil(t, b.UniqueSeedingSize)
+
+	f.sm.SetCopyGroups(f.groups(f.a, f.b))
+	require.Equal(t, new(int64(1000)), stats(f.b, true).UniqueSize, "the copy on the second instance counts there")
+
+	require.Nil(t, stats(f.a, false).UniqueSize, "a view without the Unique size has none")
 }
 
 func TestSetCopyGroupsNotifiesChangedInstances(t *testing.T) {
@@ -346,19 +452,19 @@ func TestSetCopyGroupsNotifiesChangedInstances(t *testing.T) {
 		return out
 	}
 
-	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}}, []int{1, 2}))
+	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}}, nil, []int{1, 2}))
 	require.Equal(t, []int{1, 2}, updates(), "a first map")
 
-	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}}, []int{1, 2}))
+	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}}, nil, []int{1, 2}))
 	require.Empty(t, updates(), "an equal map")
 
-	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}, 2: {"a1": 1}}, []int{1, 2}))
+	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}, 2: {"a1": 1}}, nil, []int{1, 2}))
 	require.Equal(t, []int{2}, updates(), "new entries on one instance")
 
-	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}, 2: {"a1": 1}}, []int{1, 2, 3}))
+	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 1, "b1": 1}, 2: {"a1": 1}}, nil, []int{1, 2, 3}))
 	require.Equal(t, []int{3}, updates(), "an instance that joins the record")
 
-	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 2, "b1": 2}, 2: {"a1": 1}}, []int{1, 2, 3}))
+	sm.SetCopyGroups(NewCopyGroups(map[int]map[string]uint64{1: {"a1": 2, "b1": 2}, 2: {"a1": 1}}, nil, []int{1, 2, 3}))
 	require.Equal(t, []int{1}, updates(), "a changed group id")
 }
 

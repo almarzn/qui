@@ -10,6 +10,11 @@ import type {
   AddRSSFolderRequest,
   AddTorrentResponse,
   ApplicationInfo,
+  ListedProblemReport,
+  ProblemReportFacts,
+  ProblemReportPayload,
+  ProblemReportStartedFrom,
+  SentProblemReport,
   AppPreferences,
   PreferenceField,
   NetworkBindingInterface,
@@ -51,11 +56,15 @@ import type {
   ManualCrossSeedProposal,
   ManualCrossSeedProposalsResponse,
   SeasonPackRun,
+  CrossSeedGazelleLookup,
+  CrossSeedGazelleSite,
   CrossSeedTorrentInfo,
   CrossSeedTorrentSearchResponse,
   CrossSeedTorrentSearchSelection,
   DashboardSettings,
   DashboardSettingsInput,
+  TransferHistorySettings,
+  TransferHistorySettingsStatus,
   DirScanDirectory,
   DirScanDirectoryCreate,
   DirScanTriggerResponse,
@@ -79,6 +88,7 @@ import type {
   IndexerResponse,
   InstanceCapabilities,
   InstanceCrossSeedCompletionSettings,
+  InstanceDisk,
   InstanceFormData,
   InstanceReannounceActivity,
   InstanceResponse,
@@ -140,8 +150,20 @@ import type {
   UncheckedInstance,
   User,
   VersionInfo,
+  SystemNotice,
+  DatabaseShrinkStatus,
   WarningResponse,
-  WebSeed
+  WebSeed,
+  SSHCredentials,
+  SSHTestResponse,
+  LiveTrackerGroup,
+  TransferHistoryInstance,
+  LiveSamples,
+  TransferHistoryLibraryRow,
+  TransferHistoryQuery,
+  TransferHistoryRow,
+  TransferHistoryDeletesAnswer,
+  TransferHistoryDeletesQuery
 } from "@/types"
 import type {
   ArrInstance,
@@ -151,7 +173,9 @@ import type {
   ArrTestResponse
 } from "@/types/arr"
 import { getApiBaseUrl, withBasePath } from "./base-url"
+import { recordFailedRequest } from "./failed-requests"
 import { normalizeCrossInstanceTorrents, type RawCrossInstanceTorrent } from "./cross-instance-torrents"
+import type { CustomThemeFile } from "./custom-themes"
 // The instance "@/i18n" initializes. Importing "@/i18n" here instead splits the bundled
 // English namespaces out of the entry chunk into eight extra initial requests.
 import i18n from "i18next"
@@ -428,9 +452,53 @@ function clearSSORecoveryGuard(): void {
   }
 }
 
+async function extractErrorData(response: Response): Promise<{ message: string; data?: unknown }> {
+  const fallbackMessage = i18n.t("errors.httpStatus", { ns: "common", status: response.status })
+
+  try {
+    const contentType = response.headers.get("content-type") || ""
+    const rawBody = await response.text()
+
+    if (!rawBody) {
+      return { message: fallbackMessage }
+    }
+
+    // Try to parse as JSON first
+    try {
+      const errorData = JSON.parse(rawBody) as { error?: string; message?: string; [key: string]: unknown }
+      const parsedMessage = errorData?.error ?? errorData?.message
+      if (typeof parsedMessage === "string" && parsedMessage.trim().length > 0) {
+        // Return both the message and the full data (for 409 conflicts with automations, etc.)
+        return { message: parsedMessage, data: errorData }
+      }
+      // Even if no message, return the data for potential use
+      return { message: fallbackMessage, data: errorData }
+    } catch {
+      // JSON parse failed - check if it's HTML (e.g., reverse proxy error page)
+      if (contentType.includes("text/html") || rawBody.trimStart().startsWith("<")) {
+        // Don't show raw HTML to user, provide a readable message
+        return { message: i18n.t("errors.httpStatusHtml", { ns: "common", status: response.status }) }
+      }
+
+      // Plain text error
+      const trimmed = rawBody.trim()
+      if (trimmed.length > 0 && trimmed.length < 500) {
+        return { message: trimmed }
+      }
+    }
+
+    return { message: fallbackMessage }
+  } catch {
+    return { message: fallbackMessage }
+  }
+}
+
 /**
  * SSO-safe fetch wrapper. Handles network errors and HTML responses that indicate
  * an expired SSO session by triggering a top-level navigation.
+ *
+ * Every request of the API client goes through it, so it keeps each failure in the
+ * failed-request list that a Problem report sends.
  */
 async function ssoSafeFetch(url: string, options: RequestInit): Promise<Response> {
   const isLoginRequest = url.includes("/api/auth/login")
@@ -452,6 +520,9 @@ async function ssoSafeFetch(url: string, options: RequestInit): Promise<Response
         return new Promise<Response>(() => {})
       }
     }
+    if (!cancelledByCaller(options.signal)) {
+      recordFailedRequest(url, options.method, undefined, error instanceof Error ? error.message : String(error))
+    }
     throw error
   }
 
@@ -461,11 +532,23 @@ async function ssoSafeFetch(url: string, options: RequestInit): Promise<Response
     if (await attemptSSORecoveryNavigation({ bypassGuard: isLoginRequest })) {
       return new Promise<Response>(() => {})
     }
-    throw new Error(i18n.t("errors.ssoHtmlResponse", { ns: "common" }))
+    const message = i18n.t("errors.ssoHtmlResponse", { ns: "common" })
+    recordFailedRequest(url, options.method, response.status, message)
+    throw new Error(message)
   }
 
   clearSSORecoveryGuard()
+  if (!response.ok) {
+    // The caller gets the response now. The error lands in the list when its body is in.
+    const time = new Date().toISOString()
+    void extractErrorData(response.clone()).then(({ message }) => recordFailedRequest(url, options.method, response.status, message, time))
+  }
   return response
+}
+
+/** A request that its caller aborted did not fail. An abort for a timeout did. */
+function cancelledByCaller(signal: AbortSignal | null | undefined): boolean {
+  return signal?.aborted === true && (signal.reason as Error | undefined)?.name !== "TimeoutError"
 }
 
 // Custom error class for API errors with status and additional data
@@ -569,6 +652,7 @@ export interface StreamSubscription {
   filters?: TorrentFilters | null
   summary?: boolean
   groupCopies?: boolean
+  uniqueSize?: boolean
 }
 
 function normalizeStreamSubscription(stream: StreamSubscription) {
@@ -584,11 +668,12 @@ function normalizeStreamSubscription(stream: StreamSubscription) {
     filters: serializeFilters(stream.filters) ?? null,
     summary: stream.summary ?? false,
     ...(stream.groupCopies ? { groupCopies: true } : {}),
+    ...(stream.uniqueSize ? { uniqueSize: true } : {}),
   }
 }
 
 class ApiClient {
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options?: RequestInit
   ): Promise<T> {
@@ -601,7 +686,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const { message, data } = await this.extractErrorData(response)
+      const { message, data } = await extractErrorData(response)
       this.handleAuthError(response.status, endpoint, message)
       throw new APIError(message, response.status, data)
     }
@@ -612,47 +697,6 @@ class ApiClient {
     }
 
     return response.json()
-  }
-
-  private async extractErrorData(response: Response): Promise<{ message: string; data?: unknown }> {
-    const fallbackMessage = i18n.t("errors.httpStatus", { ns: "common", status: response.status })
-
-    try {
-      const contentType = response.headers.get("content-type") || ""
-      const rawBody = await response.text()
-
-      if (!rawBody) {
-        return { message: fallbackMessage }
-      }
-
-      // Try to parse as JSON first
-      try {
-        const errorData = JSON.parse(rawBody) as { error?: string; message?: string; [key: string]: unknown }
-        const parsedMessage = errorData?.error ?? errorData?.message
-        if (typeof parsedMessage === "string" && parsedMessage.trim().length > 0) {
-          // Return both the message and the full data (for 409 conflicts with automations, etc.)
-          return { message: parsedMessage, data: errorData }
-        }
-        // Even if no message, return the data for potential use
-        return { message: fallbackMessage, data: errorData }
-      } catch {
-        // JSON parse failed - check if it's HTML (e.g., reverse proxy error page)
-        if (contentType.includes("text/html") || rawBody.trimStart().startsWith("<")) {
-          // Don't show raw HTML to user, provide a readable message
-          return { message: i18n.t("errors.httpStatusHtml", { ns: "common", status: response.status }) }
-        }
-
-        // Plain text error
-        const trimmed = rawBody.trim()
-        if (trimmed.length > 0 && trimmed.length < 500) {
-          return { message: trimmed }
-        }
-      }
-
-      return { message: fallbackMessage }
-    } catch {
-      return { message: fallbackMessage }
-    }
   }
 
   private handleAuthError(status: number, endpoint: string, errorMessage: string): void {
@@ -820,12 +864,98 @@ class ApiClient {
     return this.request(`/instances/${id}/test`, { method: "POST" })
   }
 
+  async setSSHCredentials(id: number, data: SSHCredentials): Promise<void> {
+    return this.request(`/instances/${id}/ssh-credentials`, { method: "PUT", body: JSON.stringify(data) })
+  }
+
+  async clearSSHCredentials(id: number): Promise<void> {
+    return this.request(`/instances/${id}/ssh-credentials`, { method: "DELETE" })
+  }
+
+  async testSSH(id: number): Promise<SSHTestResponse> {
+    return this.request<SSHTestResponse>(`/instances/${id}/ssh-test`, { method: "POST" })
+  }
+
+  async confirmSSHHostKey(id: number, hostKey: string): Promise<void> {
+    return this.request(`/instances/${id}/ssh-host-key`, { method: "POST", body: JSON.stringify({ hostKey }) })
+  }
+
+  async replaceSSHHostKey(id: number, hostKey: string): Promise<void> {
+    return this.request(`/instances/${id}/ssh-host-key/replace`, { method: "POST", body: JSON.stringify({ hostKey }) })
+  }
+
   async getInstanceCapabilities(id: number): Promise<InstanceCapabilities> {
     return this.request<InstanceCapabilities>(`/instances/${id}/capabilities`)
   }
 
   async getTransferInfo(id: number): Promise<TransferInfo> {
     return this.request<TransferInfo>(`/instances/${id}/transfer-info`)
+  }
+
+  async getInstanceDisk(id: number): Promise<InstanceDisk> {
+    return this.request<InstanceDisk>(`/instances/${id}/disk`)
+  }
+
+  // bytes is null when qBittorrent cannot measure the path.
+  async getFreeSpaceAtPath(id: number, path: string): Promise<{ path: string; bytes: number | null }> {
+    return this.request<{ path: string; bytes: number | null }>(
+      `/instances/${id}/free-space?path=${encodeURIComponent(path)}`
+    )
+  }
+
+  async getTransferHistory(instanceId: number, query: TransferHistoryQuery): Promise<TransferHistoryRow[]> {
+    const params = new URLSearchParams({ to: query.to.toISOString(), bucket: query.bucket, groupBy: query.groupBy })
+    if (query.from) {
+      params.set("from", query.from.toISOString())
+    }
+    if (query.group !== undefined) {
+      params.set("group", query.group)
+    }
+    if (query.groupOf) {
+      params.set("groupOf", query.groupOf)
+    }
+    if (query.limit) {
+      params.set("limit", String(query.limit))
+    }
+    if (query.timeZone) {
+      params.set("timeZone", query.timeZone)
+    }
+    const response = await this.request<{ rows: TransferHistoryRow[] }>(`/instances/${instanceId}/transfer-history?${params}`)
+    return response.rows
+  }
+
+  async getTransferHistoryLibrary(instanceId: number, query: { from?: Date; to: Date }): Promise<TransferHistoryLibraryRow[]> {
+    const params = new URLSearchParams({ to: query.to.toISOString() })
+    if (query.from) {
+      params.set("from", query.from.toISOString())
+    }
+    const response = await this.request<{ rows: TransferHistoryLibraryRow[] }>(`/instances/${instanceId}/transfer-history/library?${params}`)
+    return response.rows
+  }
+
+  async getTrackerGroups(instanceId: number): Promise<LiveTrackerGroup[]> {
+    const response = await this.request<{ groups: LiveTrackerGroup[] }>(`/instances/${instanceId}/tracker-groups`)
+    return response.groups
+  }
+
+  async getTransferHistoryDeletes(instanceId: number, query: TransferHistoryDeletesQuery): Promise<TransferHistoryDeletesAnswer> {
+    const params = new URLSearchParams({ to: query.to.toISOString(), limit: String(query.limit), offset: String(query.offset) })
+    if (query.from) {
+      params.set("from", query.from.toISOString())
+    }
+    if (query.cause) {
+      params.set("cause", query.cause)
+    }
+    return this.request<TransferHistoryDeletesAnswer>(`/instances/${instanceId}/transfer-history/deletes?${params}`)
+  }
+
+  async getTransferHistoryStatus(): Promise<TransferHistoryInstance[]> {
+    const response = await this.request<{ instances: TransferHistoryInstance[] }>("/transfer-history/status")
+    return response.instances
+  }
+
+  async getLiveSamples(): Promise<LiveSamples> {
+    return this.request<LiveSamples>("/live-samples")
   }
 
   async getInstanceReannounceActivity(
@@ -910,7 +1040,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const { message } = await this.extractErrorData(response)
+      const { message } = await extractErrorData(response)
       this.handleAuthError(response.status, `/instances/${instanceId}/backups/import`, message)
       throw new Error(message)
     }
@@ -1011,6 +1141,7 @@ class ApiClient {
       filters?: TorrentFilters
       preferCached?: boolean
       groupCopies?: boolean
+      uniqueSize?: boolean
     },
     signal?: AbortSignal
   ): Promise<TorrentResponse> {
@@ -1023,6 +1154,7 @@ class ApiClient {
     if (params.filters) searchParams.set("filters", JSON.stringify(serializeFilters(params.filters)))
     if (params.preferCached) searchParams.set("prefer", "stale")
     if (params.groupCopies) searchParams.set("groupCopies", "true")
+    if (params.uniqueSize) searchParams.set("uniqueSize", "true")
 
     return this.request<TorrentResponse>(
       `/instances/${instanceId}/torrents?${searchParams}`,
@@ -1283,6 +1415,7 @@ class ApiClient {
       filtered_indexers?: number[]
       excluded_indexers?: Record<string, string>
       content_matches?: string[]
+      gazellePlan?: CrossSeedGazelleLookup[]
     }
 
     const raw = await this.request<RawTorrentInfo>(
@@ -1311,6 +1444,7 @@ class ApiClient {
       filteredIndexers: raw.filtered_indexers,
       excludedIndexers: normalizeExcludedIndexerMap(raw.excluded_indexers),
       contentMatches: raw.content_matches,
+      gazellePlan: raw.gazellePlan,
     }
   }
 
@@ -1367,6 +1501,8 @@ class ApiClient {
       query?: string
       limit?: number
       indexerIds?: number[]
+      /** API hosts of the RED/OPS sites to ask. Undefined means every site. */
+      gazelleSites?: string[]
       findIndividualEpisodes?: boolean
       cacheMode?: "bypass"
     } = {}
@@ -1381,6 +1517,9 @@ class ApiClient {
     }
     if (options.indexerIds && options.indexerIds.length > 0) {
       body.indexer_ids = options.indexerIds
+    }
+    if (options.gazelleSites) {
+      body.gazelle_sites = options.gazelleSites
     }
     if (options.findIndividualEpisodes !== undefined) {
       body.find_individual_episodes = options.findIndividualEpisodes
@@ -1410,6 +1549,7 @@ class ApiClient {
       filtered_indexers?: number[]
       excluded_indexers?: Record<string, string>
       content_matches?: string[]
+      gazellePlan?: CrossSeedGazelleLookup[]
     } | null
 
     type RawSearchResult = {
@@ -1441,7 +1581,8 @@ class ApiClient {
       cache?: TorznabSearchCacheMetadata
       partial?: boolean
       query_degraded?: CrossSeedQueryDegradedReason
-      gazelle_timed_out?: boolean
+      // Already camelCase over the wire, like decisionTrace.
+      gazelleLookups?: CrossSeedGazelleLookup[]
       torznab_failed?: boolean
       // Already camelCase over the wire, like cache.
       decisionTrace?: CrossSeedSearchDecisionTrace
@@ -1473,6 +1614,7 @@ class ApiClient {
       filteredIndexers: torrent?.filtered_indexers ?? undefined,
       excludedIndexers: normalizeExcludedIndexerMap(torrent?.excluded_indexers),
       contentMatches: torrent?.content_matches ?? undefined,
+      gazellePlan: torrent?.gazellePlan ?? undefined,
     })
 
     return {
@@ -1502,7 +1644,7 @@ class ApiClient {
       cache: response.cache,
       partial: response.partial ?? undefined,
       queryDegraded: response.query_degraded ?? undefined,
-      gazelleTimedOut: response.gazelle_timed_out ?? undefined,
+      gazelleLookups: response.gazelleLookups ?? undefined,
       torznabFailed: response.torznab_failed ?? undefined,
       decisionTrace: response.decisionTrace,
     }
@@ -1730,6 +1872,10 @@ class ApiClient {
     return this.request<CrossSeedAutomationSettings>("/cross-seed/settings")
   }
 
+  async getCrossSeedGazelleSites(): Promise<CrossSeedGazelleSite[]> {
+    return this.request<CrossSeedGazelleSite[]>("/cross-seed/gazelle/sites")
+  }
+
   async patchCrossSeedSettings(payload: CrossSeedAutomationSettingsPatch) {
     return this.request<CrossSeedAutomationSettings & { warning?: string }>("/cross-seed/settings", {
       method: "PATCH",
@@ -1830,6 +1976,8 @@ class ApiClient {
     instanceId: number
     categories: string[]
     tags: string[]
+    excludeCategories: string[]
+    excludeTags: string[]
     intervalSeconds: number
     indexerIds: number[]
     disableTorznab?: boolean
@@ -1841,6 +1989,11 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(payload),
     })
+  }
+
+  /** Starts a scheduled run with the saved settings and restarts the schedule clock. Fails with 409 while a run is active. */
+  async runCrossSeedSearchScheduleNow(): Promise<CrossSeedSearchRun> {
+    return this.request<CrossSeedSearchRun>("/cross-seed/search/schedule/run", { method: "POST" })
   }
 
   async cancelCrossSeedSearchRun(): Promise<void> {
@@ -1922,7 +2075,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const { message } = await this.extractErrorData(response)
+      const { message } = await extractErrorData(response)
       this.handleAuthError(response.status, `/instances/${instanceId}/torrents/${encodedHash}/export`, message)
       throw new Error(message)
     }
@@ -1948,7 +2101,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const { message } = await this.extractErrorData(response)
+      const { message } = await extractErrorData(response)
       this.handleAuthError(response.status, "/torrents/export", message)
       throw new Error(message)
     }
@@ -2270,6 +2423,7 @@ class ApiClient {
   // License endpoints
   async activateLicense(licenseKey: string): Promise<{
     valid: boolean
+    productName?: string
     expiresAt?: string
     message?: string
     error?: string
@@ -2280,7 +2434,7 @@ class ApiClient {
     })
   }
 
-  async getLicensedThemes(): Promise<{ hasPremiumAccess: boolean }> {
+  async getLicensedThemes(): Promise<{ hasPremiumAccess: boolean; isSupporter: boolean; setupAt?: string }> {
     return this.request("/license/licensed")
   }
 
@@ -2302,12 +2456,30 @@ class ApiClient {
     return this.request("/themes", { signal })
   }
 
-  // Custom themes (sideloaded CSS files; premium-gated server-side)
+  // Custom themes (CSS files in the custom themes folder; premium-gated server-side)
   async getCustomThemes(): Promise<{
     directory: string
-    themes: Array<{ id: string; filename: string; css: string }>
+    themes: CustomThemeFile[]
   }> {
     return this.request("/themes/custom")
+  }
+
+  async createCustomTheme(id: string, css: string): Promise<CustomThemeFile> {
+    return this.request<CustomThemeFile>("/themes/custom", {
+      method: "POST",
+      body: JSON.stringify({ id, css }),
+    })
+  }
+
+  async replaceCustomTheme(id: string, css: string): Promise<CustomThemeFile> {
+    return this.request<CustomThemeFile>(`/themes/custom/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify({ css }),
+    })
+  }
+
+  async deleteCustomTheme(id: string): Promise<void> {
+    return this.request(`/themes/custom/${encodeURIComponent(id)}`, { method: "DELETE" })
   }
 
   // Theme settings (theme selection stored in the database; writes premium-gated server-side)
@@ -2369,6 +2541,41 @@ class ApiClient {
     return this.request<ApplicationInfo>("/application/info")
   }
 
+  // A search report also needs the instance, the torrent and the search inputs, which #4255 adds. Without them the server answers 400.
+  async getProblemReportFacts(startedFrom: ProblemReportStartedFrom): Promise<ProblemReportFacts> {
+    return this.request<ProblemReportFacts>(`/problem-reports/facts?startedFrom=${startedFrom}`)
+  }
+
+  /** Throws an APIError whose message is the refusal reason from the server, for example `anonymous_full`. */
+  async sendProblemReport(report: ProblemReportPayload): Promise<SentProblemReport> {
+    const endpoint = "/problem-reports"
+    const formData = new FormData()
+    formData.append("report", JSON.stringify(report))
+
+    const response = await ssoSafeFetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const { message, data } = await extractErrorData(response)
+      this.handleAuthError(response.status, endpoint, message)
+      throw new APIError(message, response.status, data)
+    }
+
+    return response.json()
+  }
+
+  /** Sent reports, the newest first. The server asks brrbin for fresh Report statuses first. */
+  async getSentProblemReports(): Promise<ListedProblemReport[]> {
+    return this.request<ListedProblemReport[]>("/problem-reports")
+  }
+
+  /** Throws an APIError whose message is `unavailable` when brrbin cannot delete the report. */
+  async deleteProblemReport(id: string): Promise<void> {
+    await this.request<void>(`/problem-reports/${encodeURIComponent(id)}`, { method: "DELETE" })
+  }
+
   async getVersion(): Promise<VersionInfo> {
     return this.request<VersionInfo>("/version")
   }
@@ -2404,6 +2611,27 @@ class ApiClient {
       // Return null if no update available (204 status) or any error
       return null
     }
+  }
+
+  async getSystemNotices(): Promise<SystemNotice[]> {
+    return this.request<SystemNotice[]>("/system-notices")
+  }
+
+  async dismissSystemNotice(kind: string): Promise<void> {
+    await this.request<void>(`/system-notices/${encodeURIComponent(kind)}`, { method: "DELETE" })
+  }
+
+  async getDatabaseShrink(): Promise<DatabaseShrinkStatus> {
+    return this.request<DatabaseShrinkStatus>("/database/shrink")
+  }
+
+  /** Stores the "shrink pending" mark. restarting is false where qui cannot restart itself. */
+  async requestDatabaseShrink(): Promise<{ restarting: boolean }> {
+    return this.request<{ restarting: boolean }>("/database/shrink", { method: "POST" })
+  }
+
+  async dismissDatabaseShrinkResult(): Promise<void> {
+    await this.request<void>("/database/shrink/result", { method: "DELETE" })
   }
 
   async getTrackerIcons(): Promise<Record<string, string>> {
@@ -2539,6 +2767,26 @@ class ApiClient {
       method: "PUT",
       body: JSON.stringify(data),
     })
+  }
+
+  async getTransferHistorySettingsStatus(): Promise<TransferHistorySettingsStatus> {
+    return this.request<TransferHistorySettingsStatus>("/transfer-history/status")
+  }
+
+  async updateTransferHistorySettings(data: TransferHistorySettings): Promise<TransferHistorySettings> {
+    return this.request<TransferHistorySettings>("/transfer-history/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  /** Deletes the history of one instance or of all instances: everything, or the UTC days before the day of `before`. */
+  async deleteTransferHistory(target: { instanceId: number | "all"; before?: Date }): Promise<void> {
+    const params = new URLSearchParams({ instanceId: String(target.instanceId) })
+    if (target.before) {
+      params.set("before", target.before.toISOString())
+    }
+    return this.request<void>(`/transfer-history?${params}`, { method: "DELETE" })
   }
 
   // Log Exclusions endpoints
@@ -3018,6 +3266,11 @@ class ApiClient {
       method: "POST",
     })
   }
+}
+
+/** Sends a JSON request through the shared API client (auth, SSO, errors). */
+export function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  return api.request<T>(endpoint, options)
 }
 
 export const api = new ApiClient()

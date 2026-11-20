@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 	"github.com/autobrr/qui/internal/services/crossseed/gazellemusic"
 	"github.com/autobrr/qui/internal/services/jackett"
 )
@@ -29,7 +30,7 @@ import (
 type boundAnnouncementMatch struct {
 	instanceID   int
 	instanceName string
-	torrent      qbt.Torrent
+	torrent      *qbt.Torrent
 	decision     searchDecisionProvenance
 }
 
@@ -111,7 +112,7 @@ func boundAnnouncementResponseTerminal(response *CrossSeedResponse) bool {
 	for _, result := range response.Results {
 		// qBittorrent holds a stranded torrent, so a later source would only
 		// report "exists" and hide the failure.
-		if class := result.class(); class == classAdded || class == classExists || class == classStranded {
+		if class := result.class(); class == ClassAdded || class == ClassExists || class == ClassStranded {
 			return true
 		}
 	}
@@ -157,6 +158,9 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 		return nil, errors.New("torrent_name is required")
 	}
 
+	if req.SearchDecision.catalog() {
+		return s.findCatalogCandidate(ctx, req)
+	}
 	if req.ManualTargetHash != "" {
 		return s.findManualTargetCandidate(ctx, req)
 	}
@@ -223,7 +227,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 	for _, instanceID := range searchInstanceIDs {
 		var (
 			instance *models.Instance
-			torrents []qbt.Torrent
+			torrents []*qbt.Torrent
 		)
 
 		if snapshots != nil {
@@ -247,7 +251,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 
 		if torrents == nil {
 			var err error
-			torrents, err = s.syncManager.GetTorrents(ctx, instanceID, qbt.TorrentFilterOptions{Filter: qbt.TorrentFilterAll})
+			torrents, err = s.syncManager.GetTorrentRefs(ctx, instanceID, qbittorrent.TorrentRefFilter{})
 			if err != nil {
 				log.Warn().
 					Int("instanceID", instanceID).
@@ -264,7 +268,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 				}
 
 				// Re-fetch torrents after recovery to get updated states
-				torrents, err = s.syncManager.GetTorrents(ctx, instanceID, qbt.TorrentFilterOptions{Filter: qbt.TorrentFilterCompleted})
+				torrents, err = s.syncManager.GetTorrentRefs(ctx, instanceID, qbittorrent.TorrentRefFilter{Completed: true})
 				if err != nil {
 					log.Warn().
 						Int("instanceID", instanceID).
@@ -276,7 +280,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 			}
 		}
 
-		torrentByHash := make(map[string]qbt.Torrent, len(torrents))
+		torrentByHash := make(map[string]*qbt.Torrent, len(torrents))
 		candidateHashes := make([]string, 0, len(torrents))
 		titleRescueHash := ""
 
@@ -289,7 +293,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 		// Pre-filter torrents before loading files to reduce downstream work
 		var sourceTitleBuf [16]string
 		for _, torrent := range torrents {
-			if s.sourceGate().check(&torrent, req.sourceFilter) != sourcePass {
+			if s.sourceGate().check(torrent, req.sourceFilter) != sourcePass {
 				continue
 			}
 
@@ -305,7 +309,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 			if isSearchSource {
 				// Search may have used the selected files to recover structure and
 				// group provenance. Read the torrent as search did.
-				sourceSide = s.deriveSearchSourceRelease(ctx, instanceID, &torrent)
+				sourceSide = s.deriveSearchSourceRelease(ctx, instanceID, torrent)
 			} else {
 				sourceSide = s.matcher().readName(torrent.Name)
 			}
@@ -364,13 +368,13 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 			continue
 		}
 
-		candidates := make([]qbt.Torrent, 0, len(torrentByHash))
+		candidates := make([]*qbt.Torrent, 0, len(torrentByHash))
 		for _, t := range torrentByHash {
 			candidates = append(candidates, t)
 		}
 		filesByHash := s.batchLoadCandidateFiles(ctx, instanceID, candidates)
 
-		var matchedTorrents []qbt.Torrent
+		var matchedTorrents []*qbt.Torrent
 		var titleRescueTorrent *qbt.Torrent
 		matchTypeCounts := make(map[string]int)
 
@@ -394,8 +398,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 				continue
 			}
 			if hashKey == titleRescueHash {
-				rescue := torrent
-				titleRescueTorrent = &rescue
+				titleRescueTorrent = torrent
 				continue
 			}
 
@@ -413,7 +416,7 @@ func (s *Service) findCandidates(ctx context.Context, req *FindCandidatesRequest
 		// A normal internal-title match wins. Use rescue only when the bound source
 		// torrent still fails the normal title rules.
 		if len(matchedTorrents) == 0 && titleRescueTorrent != nil {
-			matchedTorrents = append(matchedTorrents, *titleRescueTorrent)
+			matchedTorrents = append(matchedTorrents, titleRescueTorrent)
 			matchTypeCounts["size"] = 1
 		}
 
@@ -490,6 +493,22 @@ func (s *Service) CrossSeed(ctx context.Context, req *CrossSeedRequest) (*CrossS
 	// when the raw name already parses as TV. Ordinary and Manual apply keep the
 	// raw TV identity. Non-TV names still need file-derived structure in either path.
 	sourceView := s.readApplyTarget(meta.Name, meta.Files, requestHasSearchDecision(req))
+	if req.SearchDecision.catalog() {
+		if meta.Info == nil || !meta.Info.HasV1() {
+			return nil, errors.New("file evidence requires a v1 target torrent")
+		}
+		if req.ManualTargetHash != "" {
+			return nil, errors.New("file evidence cannot be used as a manual decision")
+		}
+		if err := validateCatalogTarget(req.SearchDecision, meta.HashV1, meta.Files); err != nil {
+			return nil, err
+		}
+		sourceView, err = s.readCatalogRelease(meta.Name, meta.Files, req.SearchDecision.Catalog.Family)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	sourceRelease := sourceView.release
 
 	// Carry the private search decision into candidate discovery. Apply keeps
@@ -598,7 +617,7 @@ func (s *Service) CrossSeed(ctx context.Context, req *CrossSeedRequest) (*CrossS
 	// A season pack that couldn't cross-seed directly but has same-title episodes
 	// in the library can still be assembled by the season-pack pipeline.
 	if !response.Success && candidatesResp.seasonPackEpisodeCandidates &&
-		!requestRequiresSearchVerification(req) {
+		!requestRequiresSearchVerification(req) && !req.SearchDecision.catalog() {
 		s.maybeDivertSeasonPack(ctx, req, meta.Name, response)
 	}
 
@@ -730,7 +749,7 @@ func (s *Service) downloadTorrent(ctx context.Context, req jackett.TorrentDownlo
 // search source when rechecks are disabled. Other torrents in the aggregated
 // candidate remain eligible, so a strict alternative can supply the add plan.
 func filterRecheckBlockedSource(candidate CrossSeedCandidate, req *CrossSeedRequest) (CrossSeedCandidate, bool) {
-	if req == nil || !req.SkipRecheck || candidate.InstanceID != req.SearchDecision.SourceInstanceID ||
+	if req == nil || req.SearchDecision.catalog() || !req.SkipRecheck || candidate.InstanceID != req.SearchDecision.SourceInstanceID ||
 		!req.SearchDecision.Relaxed.needsVerification() {
 		return candidate, false
 	}
@@ -740,7 +759,7 @@ func filterRecheckBlockedSource(candidate CrossSeedCandidate, req *CrossSeedRequ
 	}
 
 	filtered := candidate
-	filtered.Torrents = slices.DeleteFunc(slices.Clone(candidate.Torrents), func(torrent qbt.Torrent) bool {
+	filtered.Torrents = slices.DeleteFunc(slices.Clone(candidate.Torrents), func(torrent *qbt.Torrent) bool {
 		return normalizeHash(torrent.Hash) == boundHash
 	})
 	return filtered, len(filtered.Torrents) != len(candidate.Torrents)
@@ -822,6 +841,9 @@ func (s *Service) processCrossSeedCandidate(
 		}
 	}
 
+	if req.SearchDecision.catalog() {
+		ctx = qbittorrent.WithForceFilesRefresh(ctx)
+	}
 	candidateFilesByHash := s.batchLoadCandidateFiles(ctx, candidate.InstanceID, candidate.Torrents)
 	tolerancePercent := defaultSizeMismatchTolerancePercent
 	planCandidate, verificationSourceExcluded := filterRecheckBlockedSource(candidate, req)
@@ -852,6 +874,8 @@ func (s *Service) processCrossSeedCandidate(
 
 		return result
 	}
+	candidate.filePairs = addPlan.filePairs
+	facts.MappedFiles = len(addPlan.filePairs) > 0
 	matchedTorrent := &addPlan.torrent
 	candidateFiles := addPlan.files
 	matchType := addPlan.matchType
@@ -886,9 +910,21 @@ func (s *Service) processCrossSeedCandidate(
 	// Check if we need rename alignment (folder/file names differ). An
 	// unvalidated Manual match has no file mapping to align to.
 	requiresAlignment := !manualUnvalidated && needsRenameAlignment(torrentName, matchedTorrent.Name, sourceFiles, candidateFiles)
+	if facts.MappedFiles {
+		requiresAlignment = false
+		for _, pair := range addPlan.filePairs {
+			if pair.sourcePath != pair.candidatePath {
+				requiresAlignment = true
+				break
+			}
+		}
+	}
 
 	// Check if source has extra files that won't exist on disk (e.g., NFO files not in the candidate)
 	hasExtraFiles := hasExtraSourceFiles(sourceFiles, candidateFiles)
+	if len(addPlan.filePairs) > 0 {
+		hasExtraFiles = false
+	}
 
 	matchedRelease := addPlan.candidateRelease
 	// Rename-only alignment: every source file maps to an existing candidate file of
@@ -927,6 +963,10 @@ func (s *Service) processCrossSeedCandidate(
 
 	var fileSizeMismatches []contentFileSizeMismatch
 	facts.SizeMismatch, fileSizeMismatches = hasContentFileSizeMismatch(sourceFiles, candidateFiles, s.stringNormalizer)
+	if len(addPlan.filePairs) > 0 {
+		facts.SizeMismatch = false
+		fileSizeMismatches = nil
+	}
 
 	var pieceSafety PieceBoundarySafetyResult
 	if hasExtraFiles && torrentInfo != nil {
@@ -1019,6 +1059,9 @@ func (s *Service) processCrossSeedCandidate(
 	// to use the season pack's content path instead of category save path
 	isEpisodeInPack := addPlan.isEpisodeInPack
 	rootlessContentDir := rootlessDestDir(matchedTorrent, candidateFiles, isEpisodeInPack)
+	if facts.MappedFiles {
+		rootlessContentDir = ""
+	}
 
 	// Determine final category to apply (with optional .cross suffix for isolation)
 	baseCategory, crossCategory := s.determineCrossSeedCategory(ctx, req, matchedTorrent, nil)
@@ -1451,7 +1494,7 @@ func matchTypePriority(matchType string) int {
 	}
 }
 
-func (s *Service) batchLoadCandidateFiles(ctx context.Context, instanceID int, torrents []qbt.Torrent) map[string]qbt.TorrentFiles {
+func (s *Service) batchLoadCandidateFiles(ctx context.Context, instanceID int, torrents []*qbt.Torrent) map[string]qbt.TorrentFiles {
 	if len(torrents) == 0 || s.syncManager == nil {
 		return nil
 	}
@@ -1499,6 +1542,9 @@ func (s *Service) selectBestCandidateAddPlan(
 	tolerancePercent float64,
 	req *CrossSeedRequest,
 ) (*crossSeedAddPlan, string) {
+	if req != nil && req.SearchDecision.catalog() {
+		return s.catalogAddPlan(candidate, sourceRelease, sourceFiles, filesByHash, req)
+	}
 	var (
 		bestPlan         crossSeedAddPlan
 		hasBestPlan      bool
@@ -1528,7 +1574,7 @@ func (s *Service) selectBestCandidateAddPlan(
 		if req != nil && req.SearchDecision.admitted() &&
 			candidate.InstanceID == req.SearchDecision.SourceInstanceID &&
 			hashKey == normalizeHash(req.SearchDecision.SourceHash) {
-			candidateRead, _ = s.readSearchSource(ctx, &torrent, files)
+			candidateRead, _ = s.readSearchSource(ctx, torrent, files)
 		} else {
 			candidateRead = s.matcher().readName(torrent.Name)
 		}
@@ -1574,7 +1620,7 @@ func (s *Service) selectBestCandidateAddPlan(
 			continue
 		}
 
-		plan := buildCrossSeedAddPlan(torrent, files, actualMatchType, sourceRelease, candidateRelease, sourceFiles)
+		plan := buildCrossSeedAddPlan(*torrent, files, actualMatchType, sourceRelease, candidateRelease, sourceFiles)
 		if actualMatchType == manualMatchType {
 			// No validated file correspondence: keep the incoming torrent's own
 			// layout at the target's location instead of mapping into the

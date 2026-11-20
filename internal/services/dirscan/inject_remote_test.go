@@ -160,6 +160,7 @@ func TestInjectHardlinkTreeOnRemoteInstance(t *testing.T) {
 		{name: "a refused add removes the tree", addErr: errors.New("add failed"), wantMode: injectModeHardlink, wantErr: "add failed", wantRemoved: true, wantAdded: true},
 		{name: "no hardlink support falls back when set", fallback: true, hardlinkErr: noExtension, wantMode: injectModeRegular, wantSave: "/data/lib", wantAdded: true},
 		{name: "no hardlink support fails when fallback is off", hardlinkErr: noExtension, wantErr: noExtension.Error()},
+		{name: "a lost connection during the create never falls back", fallback: true, hardlinkErr: fmt.Errorf("link: %w", fsops.ErrConnectionLost), wantErr: fsops.ErrConnectionLost.Error()},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -266,7 +267,7 @@ func TestValidateLinkTreeInstance(t *testing.T) {
 	}{
 		{name: "local", instance: withLinks(models.Instance{HasLocalFilesystemAccess: true})},
 		{name: "remote has Write", instance: withLinks(*remoteInstance(models.SSHTierSFTP))},
-		{name: "no filesystem access has no Write", instance: withLinks(models.Instance{}), wantErr: "instance does not have local filesystem access enabled"},
+		{name: "no filesystem access has no Write", instance: withLinks(models.Instance{}), wantErr: "instance does not have filesystem write access"},
 		{name: "no base directory", instance: &models.Instance{HasLocalFilesystemAccess: true, UseHardlinks: true}, wantErr: "hardlink base directory is not configured"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

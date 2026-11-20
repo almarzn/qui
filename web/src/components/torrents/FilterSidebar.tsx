@@ -46,6 +46,7 @@ import { EMPTY_SIDEBAR_FILTERS, hasSidebarFilters } from "@/lib/filter-views"
 import { getIncognitoCategories, getIncognitoTags, getIncognitoTrackers, getLinuxCount, useIncognitoMode } from "@/lib/incognito"
 import { useSpreadsheetDisguise } from "@/lib/spreadsheet-disguise"
 import { TRACKER_HEALTH_DISPLAY } from "@/lib/torrent-table/row-display"
+import { themeArea } from "@/lib/theme-areas"
 import { cn, formatBytes, takeTurns } from "@/lib/utils"
 import type { Category, TorrentFilters } from "@/types"
 import { useVirtualizer } from "@tanstack/react-virtual"
@@ -797,7 +798,7 @@ const FilterSidebarComponent = ({
     const realTrackers = torrentCounts ? Object.keys(torrentCounts)
       .filter(key => key.startsWith("tracker:"))
       .map(key => key.replace("tracker:", ""))
-      .filter(tracker => torrentCounts[`tracker:${tracker}`] > 0)
+      .filter(tracker => tracker !== "" && torrentCounts[`tracker:${tracker}`] > 0)
       .sort() : []
 
     return realTrackers
@@ -1836,7 +1837,7 @@ const FilterSidebarComponent = ({
 
   if (isConcreteInstanceScope && !isInstanceActive) {
     return (
-      <div className={cn("flex h-full items-center justify-center text-center text-sm text-muted-foreground px-4", className)}>
+      <div {...themeArea("filter-sidebar")} className={cn("flex h-full items-center justify-center text-center text-sm text-muted-foreground px-4", className)}>
         {t("filterSidebar.instanceDisabled")}
       </div>
     )
@@ -1848,6 +1849,7 @@ const FilterSidebarComponent = ({
 
   return (
     <div
+      {...themeArea("filter-sidebar")}
       className={`${className} h-full w-full ${sidebarMaxWidth} flex flex-col xl:flex-shrink-0 xl:border-r xl:bg-muted/10 ${
         isStaleData ? "opacity-75 transition-opacity duration-200" : ""
       }`}
@@ -1858,7 +1860,7 @@ const FilterSidebarComponent = ({
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="font-semibold">{t("filterSidebar.title")}</h3>
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger asChild openOnTap>
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground"
@@ -2138,7 +2140,7 @@ const FilterSidebarComponent = ({
                         {t("filterSidebar.uncategorized")}
                       </span>
                       <Tooltip>
-                        <TooltipTrigger asChild>
+                        <TooltipTrigger asChild openOnTap>
                           <span
                             className={cn(
                               "text-xs tabular-nums shrink-0",
@@ -2268,7 +2270,7 @@ const FilterSidebarComponent = ({
                                       {displayName}
                                     </TruncatedText>
                                     <Tooltip>
-                                      <TooltipTrigger asChild>
+                                      <TooltipTrigger asChild openOnTap>
                                         <span
                                           className={cn(
                                             "text-xs tabular-nums shrink-0",
@@ -2380,7 +2382,7 @@ const FilterSidebarComponent = ({
                                 {displayName}
                               </TruncatedText>
                               <Tooltip>
-                                <TooltipTrigger asChild>
+                                <TooltipTrigger asChild openOnTap>
                                   <span
                                     className={cn(
                                       "text-xs tabular-nums shrink-0",
@@ -2548,7 +2550,7 @@ const FilterSidebarComponent = ({
                         {t("filterSidebar.untagged")}
                       </span>
                       <Tooltip>
-                        <TooltipTrigger asChild>
+                        <TooltipTrigger asChild openOnTap>
                           <span
                             className={cn(
                               "text-xs tabular-nums shrink-0",
@@ -2645,7 +2647,7 @@ const FilterSidebarComponent = ({
                                       {tag}
                                     </TruncatedText>
                                     <Tooltip>
-                                      <TooltipTrigger asChild>
+                                      <TooltipTrigger asChild openOnTap>
                                         <span
                                           className={cn(
                                             "text-xs tabular-nums shrink-0",
@@ -2728,7 +2730,7 @@ const FilterSidebarComponent = ({
                                 {tag}
                               </TruncatedText>
                               <Tooltip>
-                                <TooltipTrigger asChild>
+                                <TooltipTrigger asChild openOnTap>
                                   <span
                                     className={cn(
                                       "text-xs tabular-nums shrink-0",
@@ -2840,7 +2842,7 @@ const FilterSidebarComponent = ({
                         noTrackerState === "exclude" ? "text-destructive" : "text-muted-foreground"
                       )}
                     >
-                      {getDisplayCount("tracker:")}
+                      {getDisplayCount("tracker:", incognitoMode ? getLinuxCount("no-tracker", 50) : undefined)}
                     </span>
                   </label>
 

@@ -19,10 +19,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/autobrr/qui/internal/config"
+	"github.com/autobrr/qui/internal/experimental"
 	"github.com/autobrr/qui/internal/models"
 )
 
-const needsPermissionPrefix = "API key needs "
+const (
+	needsPermissionPrefix = "API key needs "
+	// The logger middleware answers with this body after it recovers a handler panic.
+	handlerPanicBody = "Internal Server Error\n"
+)
 
 // Routes that a key without any Permission reaches. Every other /api route
 // must refuse it.
@@ -62,6 +67,8 @@ func newPermissionRig(t *testing.T, setup ...func(*Dependencies)) *permissionRig
 	var err error
 	deps.Config, err = config.New(t.TempDir(), "test")
 	require.NoError(t, err)
+	// The walk covers the routes of every Experimental feature.
+	deps.Experimental = experimental.New([]string{string(experimental.ProblemReports)})
 	for _, f := range setup {
 		f(deps)
 	}
@@ -181,6 +188,8 @@ func TestEveryPermissionReachesEveryRouteExceptBrowserOnly(t *testing.T) {
 		status, body := rig.send(t, route.Method, path, key, nil)
 		require.False(t, strings.HasPrefix(body, needsPermissionPrefix), "%s %s: %d %q", route.Method, route.Path, status, body)
 		require.False(t, isInstanceLimitRefusal(body), "%s %s: a key with no Instance limit reaches every instance: %d %q", route.Method, route.Path, status, body)
+		// regression: #4055
+		require.NotEqual(t, handlerPanicBody, body, "%s %s: the handler panicked", route.Method, route.Path)
 	})
 }
 
@@ -232,6 +241,26 @@ func TestPermissionLevels(t *testing.T) {
 			require.NotEqual(t, http.StatusUnauthorized, status, "%s: %s", route, body)
 		}
 	})
+}
+
+func TestCustomThemeWritesNeedSettingsWrite(t *testing.T) {
+	rig := newPermissionRig(t)
+	readKey := rig.key(t, models.Permission{Area: models.AreaSettings, Level: models.LevelRead})
+	writeKey := rig.key(t, models.Permission{Area: models.AreaSettings, Level: models.LevelWrite})
+
+	for _, route := range []string{
+		"POST /api/themes/custom",
+		"PUT /api/themes/custom/ocean",
+		"DELETE /api/themes/custom/ocean",
+	} {
+		method, path, _ := strings.Cut(route, " ")
+		status, body := rig.send(t, method, path, readKey, nil)
+		require.Equal(t, http.StatusForbidden, status, route)
+		require.Equal(t, "API key needs Settings: write\n", body, route)
+
+		_, body = rig.send(t, method, path, writeKey, nil)
+		require.False(t, strings.HasPrefix(body, needsPermissionPrefix), "%s: %q", route, body)
+	}
 }
 
 func TestFilesWithPasskeysNeedWrite(t *testing.T) {

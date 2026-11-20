@@ -13,9 +13,11 @@ import (
 	"time"
 
 	qbt "github.com/autobrr/go-qbittorrent"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 	"github.com/autobrr/qui/internal/services/jackett"
 	"github.com/autobrr/qui/internal/services/notifications"
 )
@@ -79,7 +81,7 @@ func (s *Service) getCompletionMaxAttempts() int {
 
 // HandleTorrentCompletion evaluates completed torrents for cross-seed opportunities.
 func (s *Service) HandleTorrentCompletion(ctx context.Context, instanceID int, torrent qbt.Torrent) {
-	if s == nil || instanceID <= 0 {
+	if s == nil || instanceID <= 0 || s.isHelper(instanceID, torrent.Hash) {
 		return
 	}
 	s.partialPool.wake(partialPoolWake{instanceID: instanceID, hash: partialPoolCanonicalTorrentKey(&torrent)})
@@ -442,7 +444,7 @@ func (s *Service) applyCompletionPollResultsLocked(
 	instanceID int,
 	lane *completionLane,
 	waits map[string]*completionWaitState,
-	torrents map[string]qbt.Torrent,
+	torrents map[string]*qbt.Torrent,
 	now time.Time,
 ) {
 	for hash, wait := range waits {
@@ -451,20 +453,19 @@ func (s *Service) applyCompletionPollResultsLocked(
 			continue
 		}
 
-		torrent, ok := torrents[hash]
+		current, ok := torrents[hash]
 		if !ok {
 			s.failMissingCompletionWaitLocked(instanceID, lane, hash, wait)
 			continue
 		}
 
-		current := torrent
-		wait.lastSeen = &current
+		wait.lastSeen = current
 
 		if s.keepWaitingForCompletion(instanceID, lane, hash, wait, current, now) {
 			continue
 		}
 
-		if s.sourceGate().check(&current, sourceFilter{}) == sourceIncomplete {
+		if s.sourceGate().check(current, sourceFilter{}) == sourceIncomplete {
 			log.Warn().
 				Int("instanceID", instanceID).
 				Str("hash", current.Hash).
@@ -482,7 +483,7 @@ func (s *Service) applyCompletionPollResultsLocked(
 			continue
 		}
 
-		s.completeCompletionWaitLocked(lane, hash, wait, &current, nil)
+		s.completeCompletionWaitLocked(lane, hash, wait, current, nil)
 	}
 }
 
@@ -491,10 +492,10 @@ func (s *Service) keepWaitingForCompletion(
 	lane *completionLane,
 	hash string,
 	wait *completionWaitState,
-	current qbt.Torrent,
+	current *qbt.Torrent,
 	now time.Time,
 ) bool {
-	if s.sourceGate().check(&current, sourceFilter{}) != sourceMovingOrChecking {
+	if s.sourceGate().check(current, sourceFilter{}) != sourceMovingOrChecking {
 		return false
 	}
 
@@ -537,7 +538,7 @@ func (s *Service) keepWaitingForCompletion(
 	return true
 }
 
-func (s *Service) retryCompletionWaitLocked(instanceID int, wait *completionWaitState, current qbt.Torrent, now time.Time) {
+func (s *Service) retryCompletionWaitLocked(instanceID int, wait *completionWaitState, current *qbt.Torrent, now time.Time) {
 	retryAfter := s.getCompletionRetryDelay()
 	retryAt := now.Add(retryAfter)
 	nextAttempt := wait.attempt + 1
@@ -558,7 +559,7 @@ func (s *Service) retryCompletionWaitLocked(instanceID int, wait *completionWait
 	wait.attempt = nextAttempt
 	wait.retryAt = retryAt
 	wait.deadline = retryAt.Add(wait.timeout)
-	wait.lastSeen = &current
+	wait.lastSeen = current
 	wait.checkingLogged = false
 }
 
@@ -682,23 +683,19 @@ func (s *Service) getCompletionTorrent(ctx context.Context, instanceID int, hash
 	if !ok {
 		return nil, fmt.Errorf("%w: torrent %s not found in instance %d", ErrTorrentNotFound, hash, instanceID)
 	}
-
-	current := torrent
-	return &current, nil
+	return torrent, nil
 }
 
-func (s *Service) getCompletionTorrents(ctx context.Context, instanceID int, hashes []string) (map[string]qbt.Torrent, error) {
+func (s *Service) getCompletionTorrents(ctx context.Context, instanceID int, hashes []string) (map[string]*qbt.Torrent, error) {
 	apiCtx, cancel := context.WithTimeout(ctx, recheckAPITimeout)
 	defer cancel()
 
-	torrents, err := s.syncManager.GetTorrents(apiCtx, instanceID, qbt.TorrentFilterOptions{
-		Hashes: hashes,
-	})
+	torrents, err := s.syncManager.GetTorrentRefs(apiCtx, instanceID, qbittorrent.TorrentRefFilter{Hashes: hashes})
 	if err != nil {
 		return nil, fmt.Errorf("load torrents: %w", err)
 	}
 
-	result := make(map[string]qbt.Torrent, len(torrents))
+	result := make(map[string]*qbt.Torrent, len(torrents))
 	for _, torrent := range torrents {
 		result[normalizeHash(torrent.Hash)] = torrent
 	}
@@ -748,12 +745,14 @@ func (s *Service) executeCompletionSearch(ctx context.Context, instanceID int, t
 	scope := s.collectSearchScope(ctx, instanceID, torrent, searchScopeFacts{
 		requestedIndexerIDs: requestedIndexerIDs,
 		picked:              len(uniquePositiveInts(requestedIndexerIDs)) > 0,
+		gazelleOff:          gazelleClients.disabled(),
 		gazelleKeys:         gazelleClients.hosts(),
 	}, true)
 	if scope.err != nil {
 		return scope.err
 	}
-	if len(scope.torznabIndexerIDs) == 0 && len(scope.gazelleHosts) == 0 {
+	if len(scope.torznabIndexerIDs) == 0 && !scope.asksGazelle() {
+		logCompletionGazelleLookups(instanceID, torrent, scope.gazelle)
 		log.Debug().
 			Int("instanceID", instanceID).
 			Str("hash", torrent.Hash).
@@ -763,11 +762,15 @@ func (s *Service) executeCompletionSearch(ctx context.Context, instanceID int, t
 	}
 
 	searchCtx := jackett.WithSearchPriority(ctx, jackett.RateLimitPriorityCompletion)
-	searchResp, _, _, err := s.searchTorrentMatches(searchCtx, instanceID, torrent.Hash, TorrentSearchOptions{
+	searchResp, err := s.searchTorrentMatches(searchCtx, instanceID, torrent.Hash, TorrentSearchOptions{
 		FindIndividualEpisodes: settings.FindIndividualEpisodes,
 		RescueTitleMismatches:  settings.RescueTitleMismatches && !settings.SkipRecheck,
 		CacheMode:              cacheMode,
 	}, scope, gazelleClients)
+	if searchResp != nil {
+		logCompletionGazelleLookups(instanceID, torrent, searchResp.GazelleLookups)
+		s.stampCompletionSearchHistory(ctx, instanceID, torrent.Hash, startedAt, searchResp)
+	}
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			log.Warn().
@@ -846,6 +849,9 @@ func (s *Service) executeCompletionSearch(ctx context.Context, instanceID int, t
 		if sampleText := formatSamplesForMessage(samples, 3); sampleText != "" {
 			lines = append(lines, "Samples: "+sampleText)
 		}
+		if len(searchResp.GazelleLookups) > 0 {
+			lines = append(lines, gazelleLookupsLine(searchResp.GazelleLookups))
+		}
 		notifyCtx := context.WithoutCancel(ctx)
 		s.notifier.Notify(notifyCtx, notifications.Event{
 			Type:        eventType,
@@ -869,6 +875,32 @@ func (s *Service) executeCompletionSearch(ctx context.Context, instanceID int, t
 	return nil
 }
 
+// logCompletionGazelleLookups writes one line for each RED/OPS site: Info for a
+// match, Warn for a failure, and Debug for the rest.
+func logCompletionGazelleLookups(instanceID int, torrent *qbt.Torrent, lookups []GazelleLookup) {
+	for _, l := range lookups {
+		var event *zerolog.Event
+		switch l.Status {
+		case GazelleMatch:
+			event = log.Info()
+		case GazelleFailed:
+			event = log.Warn()
+		default:
+			event = log.Debug()
+		}
+		event.
+			Str("trigger", "completion").
+			Int("instanceID", instanceID).
+			Str("hash", torrent.Hash).
+			Str("name", torrent.Name).
+			Str("site", l.Site).
+			Str("status", string(l.Status)).
+			Str("reason", string(l.Reason)).
+			Str("detail", l.Detail).
+			Msg("[CROSSSEED-COMPLETION] RED/OPS lookup: " + gazelleOutcomeText(l))
+	}
+}
+
 // logCompletionSearchSummary emits every outcome count and promotes runs with
 // at least one addition from debug to info level.
 func logCompletionSearchSummary(instanceID int, torrent *qbt.Torrent, added, failed, skipped int) {
@@ -890,4 +922,15 @@ func logCompletionSearchSummary(instanceID int, torrent *qbt.Torrent, added, fai
 
 func hasCrossSeedTag(rawTags string) bool {
 	return slices.Contains(splitTags(rawTags), "cross-seed")
+}
+
+// stampCompletionSearchHistory marks the Torznab indexers that answered every
+// pass of a completion search, and the RED/OPS lookups that need no retry, as
+// the Library Scan does. A failed or rate-limited indexer stays unmarked, so
+// the next scheduled run asks it again.
+func (s *Service) stampCompletionSearchHistory(ctx context.Context, instanceID int, hash string, searchedAt time.Time, resp *TorrentSearchResponse) {
+	if s.automationStore == nil || ctx.Err() != nil {
+		return
+	}
+	s.stampTorrentSearchHistory(ctx, instanceID, hash, searchedAt, resp.CoveredIndexerIDs, resp.GazelleLookups)
 }

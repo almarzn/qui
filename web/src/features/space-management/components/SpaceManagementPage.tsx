@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-import { PageHeader } from "@/components/layout/PageHeader"
+import { Page } from "@/components/layout/Page"
 import { Button } from "@/components/ui/button"
 import { useDateTimeFormatters } from "@/hooks/useDateTimeFormatters"
 import { formatBytes } from "@/lib/utils"
@@ -144,17 +144,16 @@ export function SpaceManagementPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 pb-16 lg:p-6">
-      <PageHeader
-        title={t("page.title")}
-        description={t("page.description")}
-        actions={
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refresh.isPending || tree.isPending}>
-            <RefreshCw className={refresh.isPending ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-            {t("actions.refresh")}
-          </Button>
-        }
-      />
+    <Page
+      title={t("page.title")}
+      description={t("page.description")}
+      controls={
+        <Button variant="outline" onClick={handleRefresh} disabled={refresh.isPending || tree.isPending}>
+          <RefreshCw className={refresh.isPending ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
+          {t("actions.refresh")}
+        </Button>
+      }
+    >
 
       <SpaceDiskBar />
 
@@ -200,6 +199,6 @@ export function SpaceManagementPage() {
           onDeleted={() => setSelected(new Set())}
         />
       )}
-    </div>
+    </Page>
   )
 }

@@ -48,9 +48,6 @@ func (rig *instanceLimitRig) addInstance(t *testing.T, name string) int {
 	t.Helper()
 	inst, err := rig.instances.Create(t.Context(), name, "http://127.0.0.1:1", "admin", "secret", nil, nil, false, nil)
 	require.NoError(t, err)
-	// The instance list reads the recent errors of an active instance, and the test client pool has no error store.
-	_, err = rig.instances.SetActiveState(t.Context(), inst.ID, false)
-	require.NoError(t, err)
 	return inst.ID
 }
 
@@ -187,6 +184,12 @@ func TestRoutesThatSpanInstancesRefuseInstanceLimit(t *testing.T) {
 		{http.MethodPost, "/api/torrents/export"}:                                    {},
 		{http.MethodPut, "/api/instances/order"}:                                     {},
 		{http.MethodPost, "/api/instances/{instanceID}/torrents/delete-cross-seeds"}: {},
+		{http.MethodGet, "/api/live-samples"}:                                        {},
+		{http.MethodGet, "/api/transfer-history/status"}:                             {},
+		{http.MethodPut, "/api/transfer-history/settings"}:                           {},
+		{http.MethodDelete, "/api/transfer-history"}:                                 {},
+		{http.MethodGet, "/api/database/shrink"}:                                     {},
+		{http.MethodDelete, "/api/database/shrink/result"}:                           {},
 	}
 	var refused int
 	walkAPIRoutes(t, rig.permissionRig, func(route routeKey, path string) {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/autobrr/qui/internal/domain"
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 	"github.com/autobrr/qui/internal/services/arr"
 	"github.com/autobrr/qui/internal/services/crossseed/gazellemusic"
 	"github.com/autobrr/qui/internal/services/jackett"
@@ -96,7 +97,7 @@ func (s *Service) selectContentDetectionRelease(torrentName string, sourceReleas
 	if contentMismatch && !titleMismatch && fileContent.ContentType == "tv" &&
 		(sourceContent.ContentType == "movie" || sourceContent.ContentType == "music") {
 		if largestRelease.Episode > 0 || largestRelease.Series > 0 {
-			log.Debug().
+			log.Trace().
 				Str("torrentName", torrentName).
 				Str("largestFile", largestFile.Name).
 				Int("episode", largestRelease.Episode).
@@ -110,7 +111,7 @@ func (s *Service) selectContentDetectionRelease(torrentName string, sourceReleas
 		return sourceRelease, false
 	}
 
-	log.Debug().
+	log.Trace().
 		Str("torrentName", torrentName).
 		Str("largestFile", largestFile.Name).
 		Str("fileContentType", fileContent.ContentType).
@@ -139,16 +140,14 @@ func (s *Service) AnalyzeTorrentForSearchAsync(ctx context.Context, instanceID i
 		return nil, fmt.Errorf("%w: instance %d not found", ErrInvalidRequest, instanceID)
 	}
 
-	torrents, err := s.syncManager.GetTorrents(ctx, instanceID, qbt.TorrentFilterOptions{
-		Hashes: []string{hash},
-	})
+	torrents, err := s.syncManager.GetTorrentRefs(ctx, instanceID, qbittorrent.TorrentRefFilter{Hashes: []string{hash}})
 	if err != nil {
 		return nil, fmt.Errorf("load torrents: %w", err)
 	}
 	if len(torrents) == 0 {
 		return nil, fmt.Errorf("%w: torrent %s not found in instance %d", ErrTorrentNotFound, hash, instanceID)
 	}
-	sourceTorrent := &torrents[0]
+	sourceTorrent := torrents[0]
 	if err := s.requireSource(sourceTorrent); err != nil {
 		return nil, err
 	}
@@ -436,6 +435,18 @@ func (s *Service) AnalyzeTorrentForSearch(ctx context.Context, instanceID int, h
 		torrentInfo.FilteredIndexers = []int{}
 	}
 
+	_, sourceTorrent, err := s.loadSearchSource(ctx, instanceID, hash)
+	if err != nil {
+		return nil, err
+	}
+	clients, err := s.buildGazelleClientSet(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("load RED/OPS settings: %w", err)
+	}
+	if torrentInfo.GazellePlan, err = s.collectGazellePlan(ctx, instanceID, sourceTorrent, clients); err != nil {
+		return nil, err
+	}
+
 	return torrentInfo, nil
 }
 
@@ -507,44 +518,6 @@ func (s *Service) lookupARRExternalIDs(ctx context.Context, title, contentType s
 	return result, ""
 }
 
-const (
-	gazelleIndexerIDRedacted = -1001
-	gazelleIndexerIDOrpheus  = -1002
-)
-
-func gazelleIndexerIDForHost(host string) int {
-	switch normalizeLowerTrim(host) {
-	case "redacted.sh":
-		return gazelleIndexerIDRedacted
-	case "orpheus.network":
-		return gazelleIndexerIDOrpheus
-	default:
-		return -1
-	}
-}
-
-func gazelleIndexerNameForHost(host string) string {
-	switch normalizeLowerTrim(host) {
-	case "redacted.sh":
-		return "Gazelle (RED)"
-	case "orpheus.network":
-		return "Gazelle (OPS)"
-	default:
-		return "Gazelle"
-	}
-}
-
-func gazelleTargetForSource(sourceSiteHost string) string {
-	switch normalizeLowerTrim(sourceSiteHost) {
-	case "redacted.sh":
-		return "orpheus.network"
-	case "orpheus.network":
-		return "redacted.sh"
-	default:
-		return ""
-	}
-}
-
 // gazellePlausibleExtensions lists the extensions of content that RED/OPS host:
 // audio (music, audiobooks, comedy) and e-books or comics. The list excludes
 // applications and e-learning videos on purpose. Video and archive extensions
@@ -611,8 +584,8 @@ func (s *Service) detectGazelleSourceSite(torrent *qbt.Torrent) (string, bool) {
 		if domain == "" || domain == "unknown" {
 			continue
 		}
-		if site, ok := gazellemusic.TrackerToSite[domain]; ok && site != "" {
-			seen[site] = struct{}{}
+		if site, ok := gazellemusic.SiteByAnnounceDomain(domain); ok {
+			seen[site.Host] = struct{}{}
 		}
 	}
 
@@ -625,181 +598,136 @@ func (s *Service) detectGazelleSourceSite(torrent *qbt.Torrent) (string, bool) {
 	return "", false
 }
 
-// searchGazelleMatches asks the RED/OPS hosts of the Search scope for one torrent.
+// searchGazelleMatches asks each RED/OPS site that the Search scope marks
+// will_ask, at the same time, and returns one outcome for each site in the
+// order of the scope.
 func (s *Service) searchGazelleMatches(
 	ctx context.Context,
-	instanceID int,
 	sourceTorrent *qbt.Torrent,
 	sourceFiles qbt.TorrentFiles,
-	targetHosts []string,
+	scope searchScope,
 	clients *gazelleClientSet,
 ) gazelleSearchOutcome {
-	if s == nil || sourceTorrent == nil {
-		return gazelleSearchOutcome{results: []TorrentSearchResult{}}
-	}
-	out := gazelleSearchOutcome{results: make([]TorrentSearchResult, 0, len(targetHosts)), lookupCompleted: true}
-	contentMatchedHosts := make(map[string]struct{}, len(targetHosts))
-
-	// Run local content prefilter once before any remote Gazelle calls.
-	if s.syncManager != nil {
-		sourceRelease := s.releaseCache.Parse(sourceTorrent.Name)
-		instanceTorrents, err := s.syncManager.GetCachedInstanceTorrents(ctx, instanceID)
-		if err != nil {
-			log.Warn().
-				Err(err).
-				Int("instanceID", instanceID).
-				Msg("[CROSSSEED-GAZELLE] failed to load cached instance torrents for prefilter")
-		} else {
-			matchedContent, _, _, err := s.findLayoutAwareContentPrefilterMatches(
-				ctx,
-				instanceID,
-				normalizeHash(sourceTorrent.Hash),
-				sourceTorrent,
-				sourceRelease,
-				instanceTorrents,
-			)
-			if err != nil {
-				log.Warn().Err(err).
-					Int("instanceID", instanceID).
-					Str("hash", sourceTorrent.Hash).
-					Msg("[CROSSSEED-GAZELLE] failed to run content prefilter")
-			} else {
-				for _, match := range matchedContent {
-					for _, targetHost := range targetHosts {
-						if _, already := contentMatchedHosts[targetHost]; already {
-							continue
-						}
-						if s.trackerDomainsMatchIndexerDomain(match.trackerDomains, "", targetHost) {
-							contentMatchedHosts[targetHost] = struct{}{}
-						}
-					}
-				}
-			}
-		}
-	}
-
+	lookups := slices.Clone(scope.gazelle)
+	results := make([]*TorrentSearchResult, len(lookups))
 	localMap := buildFileSizeMap(sourceFiles)
-	var torrentBytes []byte
-	exportAttempted := false
-
-	for _, targetHost := range targetHosts {
-		client := clients.byHost[normalizeLowerTrim(targetHost)]
-
-		if _, matched := contentMatchedHosts[targetHost]; matched {
-			log.Debug().
-				Str("targetHost", targetHost).
-				Str("hash", sourceTorrent.Hash).
-				Msg("[CROSSSEED-GAZELLE] Target tracker content already present locally, skipping search")
+	var wg sync.WaitGroup
+	for i, lookup := range lookups {
+		if lookup.Status != GazelleWillAsk {
 			continue
 		}
-
-		if clients.denied[client.Host()] != nil {
-			out.lookupCompleted = false
-			continue
-		}
-
-		if !exportAttempted && s.syncManager != nil {
-			exportAttempted = true
-			exported, _, _, exportErr := s.syncManager.ExportTorrent(ctx, instanceID, sourceTorrent.Hash)
-			if exportErr != nil {
-				log.Warn().
-					Err(exportErr).
-					Str("hash", sourceTorrent.Hash).
-					Msg("[CROSSSEED-GAZELLE] Export torrent failed; falling back to filename matching only")
-			} else {
-				torrentBytes = exported
-			}
-		}
-
-		// If the target-site hash already exists locally, skip remote requests for this host.
-		if len(torrentBytes) > 0 && s.syncManager != nil {
-			if hashes, err := client.TargetHashes(torrentBytes); err == nil {
-				_, exists, hashErr := s.syncManager.HasTorrentByAnyHash(ctx, instanceID, hashes)
-				if hashErr == nil && exists {
-					log.Debug().
-						Str("targetHost", targetHost).
-						Str("hash", sourceTorrent.Hash).
-						Strs("targetHashes", hashes).
-						Msg("[CROSSSEED-GAZELLE] Target hash already present locally, skipping search")
-					continue
-				}
-			}
-		}
-
-		out.remoteRequestsMade = true
-		if clients.queried == nil {
-			clients.queried = make(map[string]struct{}, len(clients.byHost))
-		}
-		clients.queried[client.Host()] = struct{}{}
-		match, matchErr := findGazelleMatch(ctx, client, torrentBytes, localMap, sourceTorrent.Size)
-		if errors.Is(matchErr, gazellemusic.ErrAccessDenied) {
-			log.Warn().
-				Err(matchErr).
-				Str("targetHost", targetHost).
-				Msg("[CROSSSEED-GAZELLE] Tracker rejects every request; skipping it for the rest of the search")
-			if clients.denied == nil {
-				clients.denied = make(map[string]error, 1)
-			}
-			clients.denied[client.Host()] = matchErr
-			out.lookupCompleted = false
-			continue
-		}
-		if matchErr != nil {
-			log.Warn().
-				Err(matchErr).
-				Str("targetHost", targetHost).
-				Str("hash", sourceTorrent.Hash).
-				Msg("[CROSSSEED-GAZELLE] Search failed")
-			out.lookupCompleted = false
-			out.timedOut = out.timedOut || errors.Is(matchErr, context.DeadlineExceeded)
-			continue
-		}
-		if match == nil {
-			log.Debug().
-				Str("targetHost", targetHost).
-				Str("hash", sourceTorrent.Hash).
-				Msg("[CROSSSEED-GAZELLE] No match found")
-			continue
-		}
-
-		log.Info().
-			Str("targetHost", targetHost).
-			Str("hash", sourceTorrent.Hash).
-			Int64("torrentID", match.TorrentID).
-			Str("reason", match.Reason).
-			Msg("[CROSSSEED-GAZELLE] Match found")
-
-		out.results = append(out.results, TorrentSearchResult{
-			Indexer:              gazelleIndexerNameForHost(targetHost),
-			IndexerID:            gazelleIndexerIDForHost(targetHost),
-			Title:                match.Title,
-			DownloadURL:          gazellemusic.BuildDownloadURL(targetHost, match.TorrentID),
-			Size:                 match.Size,
-			Seeders:              0,
-			Leechers:             0,
-			CategoryID:           jackett.CategoryAudio,
-			CategoryName:         "Audio",
-			PublishDate:          "",
-			DownloadVolumeFactor: 1,
-			UploadVolumeFactor:   1,
-			GUID:                 "",
-			MatchReason:          "gazelle:" + match.Reason,
-			MatchScore:           1.0,
+		wg.Go(func() {
+			lookups[i], results[i] = s.askGazelleSite(ctx, lookup, sourceTorrent, scope.exportedTorrent, localMap, clients, scope.sourceInstanceID, sourceFiles)
 		})
 	}
+	wg.Wait()
 
+	out := gazelleSearchOutcome{results: []TorrentSearchResult{}, lookups: lookups}
+	for _, result := range results {
+		if result != nil {
+			out.results = append(out.results, *result)
+		}
+	}
 	return out
+}
+
+// askGazelleSite sends the lookup of one site.
+func (s *Service) askGazelleSite(
+	ctx context.Context,
+	lookup GazelleLookup,
+	sourceTorrent *qbt.Torrent,
+	torrentBytes []byte,
+	localMap map[string]int64,
+	clients *gazelleClientSet,
+	instanceID int,
+	sourceFiles qbt.TorrentFiles,
+) (GazelleLookup, *TorrentSearchResult) {
+	host := lookup.Site
+	if err := clients.keyErrs[host]; err != nil {
+		return lookup.failed(GazelleReasonError, "decrypt API key: "+err.Error()), nil
+	}
+	client := clients.byHost[host]
+	if denied := clients.deniedErr(host); denied != nil {
+		return lookup.failed(GazelleReasonKeyRejected, denied.Error()), nil
+	}
+	clients.markQueried(host)
+	lookup.sent = true
+	match, matchErr := findGazelleMatch(ctx, client, torrentBytes, localMap, searchSourceSize(sourceTorrent))
+	if errors.Is(matchErr, gazellemusic.ErrAccessDenied) {
+		log.Warn().
+			Err(matchErr).
+			Str("targetHost", host).
+			Msg("[CROSSSEED-GAZELLE] Tracker rejects every request; skipping it for the rest of the search")
+		clients.deny(host, matchErr)
+		// Only the rejection itself opens the notice. A later search of the
+		// same run skips the site, and a client from before a settings save
+		// has an old key: neither may open a notice that the save closed.
+		s.setKeyRejectedNotice(gazelleLookupSite(lookup), clients.keyGens[host], true, matchErr.Error()) //nolint:contextcheck // the notice notification must outlive the search that opened it
+		return lookup.failed(GazelleReasonKeyRejected, matchErr.Error()), nil
+	}
+	if matchErr != nil {
+		log.Warn().
+			Err(matchErr).
+			Str("targetHost", host).
+			Str("hash", sourceTorrent.Hash).
+			Msg("[CROSSSEED-GAZELLE] Search failed")
+		if errors.Is(matchErr, context.DeadlineExceeded) {
+			return lookup.failed(GazelleReasonTimedOut, matchErr.Error()), nil
+		}
+		return lookup.failed(GazelleReasonError, matchErr.Error()), nil
+	}
+	if match == nil {
+		log.Debug().
+			Str("targetHost", host).
+			Str("hash", sourceTorrent.Hash).
+			Msg("[CROSSSEED-GAZELLE] No match found")
+		lookup.Status = GazelleNoMatch
+		return lookup, nil
+	}
+
+	if match.Host != host {
+		lookup.Status, lookup.Detail = GazelleNoMatch, "selected target host changed"
+		return lookup, nil
+	}
+	decision, decisionErr := s.gazelleDecision(instanceID, sourceTorrent, sourceFiles, match)
+	if decisionErr != nil {
+		lookup.Status, lookup.Detail = GazelleNoMatch, decisionErr.Error()
+		return lookup, nil
+	}
+	log.Info().
+		Str("targetHost", host).
+		Str("hash", sourceTorrent.Hash).
+		Int64("torrentID", match.TorrentID).
+		Str("reason", string(match.Kind)).
+		Msg("[CROSSSEED-GAZELLE] Match found")
+
+	lookup.Status = GazelleMatch
+	return lookup, &TorrentSearchResult{
+		Indexer:              lookup.Name,
+		IndexerID:            lookup.IndexerID,
+		Title:                match.Title,
+		InfoHashV1:           match.TargetHash,
+		SearchDecision:       decision,
+		DownloadURL:          gazellemusic.BuildDownloadURL(host, match.TorrentID),
+		Size:                 match.Size,
+		Seeders:              0,
+		Leechers:             0,
+		CategoryID:           jackett.CategoryAudio,
+		CategoryName:         "Audio",
+		PublishDate:          "",
+		DownloadVolumeFactor: 1,
+		UploadVolumeFactor:   1,
+		GUID:                 "",
+		MatchReason:          "gazelle:" + string(match.Kind),
+		MatchScore:           1.0,
+	}
 }
 
 type gazelleSearchOutcome struct {
 	results []TorrentSearchResult
-	// lookupCompleted reports that RED/OPS needs no retry: each lookup ran
-	// without error or had nothing to look up. The caller stamps the RED/OPS
-	// cooldown only then.
-	lookupCompleted    bool
-	remoteRequestsMade bool
-	// timedOut reports that a lookup ran out of the time that ctx allows.
-	timedOut bool
+	// lookups holds one outcome for each RED/OPS site, in the order of the
+	// site table.
+	lookups []GazelleLookup
 }
 
 // startGazelleSearch starts the RED/OPS lookup of one search with its own
@@ -807,23 +735,27 @@ type gazelleSearchOutcome struct {
 // function waits for the lookup; it is safe to call more than once.
 func (s *Service) startGazelleSearch(
 	ctx context.Context,
-	instanceID int,
 	sourceTorrent *qbt.Torrent,
 	sourceFiles qbt.TorrentFiles,
 	scope searchScope,
 	clients *gazelleClientSet,
 ) func() gazelleSearchOutcome {
-	if len(scope.gazelleHosts) == 0 {
-		outcome := gazelleSearchOutcome{results: []TorrentSearchResult{}, lookupCompleted: scope.gazelleCooldownWithoutLookup}
+	if !scope.asksGazelle() {
+		outcome := gazelleSearchOutcome{results: []TorrentSearchResult{}, lookups: scope.gazelle}
 		return func() gazelleSearchOutcome { return outcome }
 	}
 	done := make(chan gazelleSearchOutcome, 1)
 	go func() {
 		gazelleCtx, cancel := context.WithTimeout(ctx, gazelleSearchTimeout)
 		defer cancel()
-		outcome := s.searchGazelleMatches(gazelleCtx, instanceID, sourceTorrent, sourceFiles, scope.gazelleHosts, clients)
-		// A canceled caller is not a RED/OPS timeout.
-		outcome.timedOut = outcome.timedOut && ctx.Err() == nil
+		outcome := s.searchGazelleMatches(gazelleCtx, sourceTorrent, sourceFiles, scope, clients)
+		for i, l := range outcome.lookups {
+			// A canceled caller is not a RED/OPS timeout.
+			if l.Reason == GazelleReasonTimedOut && ctx.Err() != nil {
+				outcome.lookups[i].Reason = GazelleReasonError
+			}
+		}
+		s.closeKeyRejectedNotices(outcome.lookups, clients) //nolint:contextcheck // it only closes notices; the shared helper can also open one, which outlives the search
 		done <- outcome
 	}()
 	return sync.OnceValue(func() gazelleSearchOutcome { return <-done })
@@ -958,7 +890,16 @@ func subtitleTitleQuery(release *rls.Release) string {
 }
 
 type gazelleClientSet struct {
-	byHost map[string]*gazellemusic.Client
+	// off reports that RED/OPS is turned off in the settings.
+	off bool
+	// keyGens holds the key generation of each site when the set was built.
+	keyGens map[string]uint64
+	byHost  map[string]*gazellemusic.Client
+	// keyErrs holds, per host, the error of a stored key that qui could not
+	// decrypt.
+	keyErrs map[string]error
+
+	mu sync.Mutex
 	// denied holds, per host, the gazellemusic.ErrAccessDenied that tracker
 	// returned. The set lives as long as one search, so a denied host gets no
 	// more requests in that search.
@@ -968,18 +909,55 @@ type gazelleClientSet struct {
 	queried map[string]struct{}
 }
 
-// hosts returns the RED/OPS hosts that have a client.
+// disabled reports that RED/OPS is turned off in the settings.
+func (c *gazelleClientSet) disabled() bool {
+	return c != nil && c.off
+}
+
+// hosts returns the RED/OPS hosts that have an API key.
 func (c *gazelleClientSet) hosts() []string {
 	if c == nil {
 		return nil
 	}
-	return slices.Sorted(maps.Keys(c.byHost))
+	hosts := slices.Collect(maps.Keys(c.byHost))
+	hosts = append(hosts, slices.Collect(maps.Keys(c.keyErrs))...)
+	slices.Sort(hosts)
+	return hosts
+}
+
+func (c *gazelleClientSet) deniedErr(host string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.denied[host]
+}
+
+func (c *gazelleClientSet) deny(host string, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.denied == nil {
+		c.denied = make(map[string]error, 1)
+	}
+	c.denied[host] = err
+}
+
+func (c *gazelleClientSet) markQueried(host string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.queried == nil {
+		c.queried = make(map[string]struct{}, len(c.byHost))
+	}
+	c.queried[host] = struct{}{}
 }
 
 // deniedMessage describes each tracker that rejected the key or the IP, for the
 // run record. allDenied reports that every tracker the search queried rejected it.
 func (c *gazelleClientSet) deniedMessage() (message string, allDenied bool) {
-	if c == nil || len(c.denied) == 0 {
+	if c == nil {
+		return "", false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.denied) == 0 {
 		return "", false
 	}
 	lines := make([]string, 0, len(c.denied))
@@ -991,62 +969,59 @@ func (c *gazelleClientSet) deniedMessage() (message string, allDenied bool) {
 }
 
 func (s *Service) buildGazelleClientSet(ctx context.Context, settings *models.CrossSeedAutomationSettings) (*gazelleClientSet, error) {
+	out := &gazelleClientSet{byHost: map[string]*gazellemusic.Client{}, keyErrs: map[string]error{}}
 	if s == nil {
-		return &gazelleClientSet{byHost: map[string]*gazellemusic.Client{}}, nil
+		return out, nil
 	}
+	out.keyGens = s.gazelleKeyGensNow()
 	if settings == nil {
 		loaded, err := s.GetAutomationSettings(ctx)
 		if err != nil {
-			return &gazelleClientSet{byHost: map[string]*gazellemusic.Client{}}, err
+			return out, err
 		}
 		if loaded == nil {
 			loaded = models.DefaultCrossSeedAutomationSettings()
 		}
 		settings = loaded
 	}
-	if settings == nil || !settings.GazelleEnabled {
-		return &gazelleClientSet{byHost: map[string]*gazellemusic.Client{}}, nil
+	if !settings.GazelleEnabled {
+		out.off = true
+		return out, nil
 	}
+
+	keys := models.GazelleAPIKeys{Keys: map[string]string{}}
 	if s.automationStore == nil {
 		// Allow building clients directly from settings when keys are supplied as plaintext.
 		// In normal runtime settings are loaded from the DB with redacted placeholders, so this path
 		// is mainly for tests and non-DB settings loaders.
-		out := &gazelleClientSet{byHost: make(map[string]*gazellemusic.Client, 2)}
-		if settings != nil {
-			if key := strings.TrimSpace(settings.RedactedAPIKey); key != "" && !domain.IsRedactedString(key) {
-				if c, err := newGazelleClient(redHost, "", key); err == nil {
-					out.byHost[redHost] = c
-				}
-			}
-			if key := strings.TrimSpace(settings.OrpheusAPIKey); key != "" && !domain.IsRedactedString(key) {
-				if c, err := newGazelleClient(opsHost, "", key); err == nil {
-					out.byHost[opsHost] = c
-				}
+		for _, site := range gazellemusic.Sites() {
+			if key := strings.TrimSpace(settings.GazelleAPIKey(site.SettingsName)); key != "" && !domain.IsRedactedString(key) {
+				keys.Keys[site.SettingsName] = key
 			}
 		}
-		return out, nil
+	} else {
+		stored, err := s.automationStore.GetDecryptedGazelleAPIKeys(ctx)
+		if err != nil {
+			return out, err
+		}
+		keys = stored
 	}
 
-	out := &gazelleClientSet{byHost: make(map[string]*gazellemusic.Client, 2)}
-	for _, host := range gazelleSites {
-		hostKey := normalizeLowerTrim(host)
-		if hostKey == "" {
+	for _, site := range gazellemusic.Sites() {
+		if err := keys.Errs[site.SettingsName]; err != nil {
+			out.keyErrs[site.Host] = err
 			continue
 		}
-		key, ok, err := s.automationStore.GetDecryptedGazelleAPIKey(ctx, host)
+		key := strings.TrimSpace(keys.Keys[site.SettingsName])
+		if key == "" {
+			continue
+		}
+		client, err := newGazelleClient(site.Host, "", key)
 		if err != nil {
-			log.Warn().Err(err).Str("host", host).Msg("[CROSSSEED-GAZELLE] Failed to decrypt API key")
+			log.Warn().Err(err).Str("host", site.Host).Msg("[CROSSSEED-GAZELLE] Failed to initialize client")
 			continue
 		}
-		if !ok || strings.TrimSpace(key) == "" {
-			continue
-		}
-		client, err := newGazelleClient(host, "", key)
-		if err != nil {
-			log.Warn().Err(err).Str("host", host).Msg("[CROSSSEED-GAZELLE] Failed to initialize client")
-			continue
-		}
-		out.byHost[hostKey] = client
+		out.byHost[site.Host] = client
 	}
 	return out, nil
 }

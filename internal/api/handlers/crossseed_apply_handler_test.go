@@ -27,6 +27,7 @@ import (
 	"github.com/autobrr/qui/internal/fsops/local"
 	"github.com/autobrr/qui/internal/models"
 	internalqb "github.com/autobrr/qui/internal/qbittorrent"
+	"github.com/autobrr/qui/internal/qbittorrent/syncowner"
 	"github.com/autobrr/qui/internal/services/crossseed"
 	"github.com/autobrr/qui/internal/testutil"
 	"github.com/autobrr/qui/pkg/hardlinktree"
@@ -59,8 +60,13 @@ type seasonPackHandlerSyncManager struct {
 	addCalls int
 }
 
-func (s *seasonPackHandlerSyncManager) GetTorrents(_ context.Context, instanceID int, _ qbt.TorrentFilterOptions) ([]qbt.Torrent, error) {
-	return s.torrents[instanceID], nil
+func (s *seasonPackHandlerSyncManager) GetTorrentRefs(_ context.Context, instanceID int, _ internalqb.TorrentRefFilter) ([]*qbt.Torrent, error) {
+	torrents := s.torrents[instanceID]
+	refs := make([]*qbt.Torrent, len(torrents))
+	for i := range torrents {
+		refs[i] = new(torrents[i])
+	}
+	return refs, nil
 }
 
 func (s *seasonPackHandlerSyncManager) GetTorrentFilesBatch(_ context.Context, _ int, hashes []string) (map[string]qbt.TorrentFiles, error) {
@@ -117,7 +123,7 @@ func (*seasonPackHandlerSyncManager) ExtractDomainFromURL(string) string {
 	return ""
 }
 
-func (*seasonPackHandlerSyncManager) GetQBittorrentSyncManager(context.Context, int) (*qbt.SyncManager, error) {
+func (*seasonPackHandlerSyncManager) GetSyncOwner(context.Context, int) (*syncowner.Owner, error) {
 	return nil, errors.New("not implemented")
 }
 

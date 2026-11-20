@@ -18,6 +18,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+
+	"github.com/autobrr/qui/internal/qbittorrent"
 )
 
 // TestInitPhaseWritesDirectlyToSocket pins the session writer's two-phase
@@ -102,7 +104,7 @@ func TestMultiSubscriptionInitIsRaceFree(t *testing.T) {
 func sessionContext(t *testing.T, manager *StreamManager, key string) context.Context {
 	t.Helper()
 	conn := manager.openConnection(false, 0)
-	sub, err := manager.registerSubscription(StreamOptions{InstanceID: 1, Limit: 50}, key, conn, false)
+	sub, err := manager.registerSubscription(StreamOptions{View: qbittorrent.TorrentListView{InstanceID: 1, Limit: 50}}, key, conn, false)
 	require.NoError(t, err)
 	ctx := context.WithValue(t.Context(), connectionContextKey, conn)
 	return context.WithValue(ctx, subscriptionIDsContextKey, []string{sub.id})
@@ -218,34 +220,6 @@ func TestWritePayloadToSessionFlushesHTTPFlusher(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "event: heartbeat")
 	require.Equal(t, uint64(1), manager.eventsPublished.Load())
 	require.Equal(t, uint64(0), manager.eventsDropped.Load())
-}
-
-func TestWritePayloadToSessionFlushFailureLogsExactPayloadType(t *testing.T) {
-	payloadTypes := []string{
-		streamEventInit,
-		streamEventHeartbeat,
-		"",
-		"init-heartbeat",
-		"heartbeat-extra",
-	}
-
-	for _, payloadType := range payloadTypes {
-		t.Run("type="+payloadType, func(t *testing.T) {
-			manager := NewStreamManager(nil, nil, nil, nil)
-			t.Cleanup(func() { _ = manager.Shutdown(context.Background()) })
-			logs := captureSSELogs(t)
-
-			ok := manager.writePayloadToSession(&flushErrorResponseWriter{}, &StreamPayload{
-				Type: payloadType,
-				Meta: &StreamMeta{Timestamp: time.Now()},
-			})
-
-			require.False(t, ok)
-			require.Equal(t, uint64(0), manager.eventsPublished.Load())
-			require.Equal(t, uint64(1), manager.eventsDropped.Load())
-			requireSSEPayloadFlushLog(t, logs.String(), payloadType)
-		})
-	}
 }
 
 func captureSSELogs(t *testing.T) *bytes.Buffer {

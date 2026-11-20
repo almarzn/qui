@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 
 	"github.com/autobrr/go-cache/ttlcache"
-	qbt "github.com/autobrr/go-qbittorrent"
 	"github.com/rs/zerolog/log"
 
+	"github.com/autobrr/qui/internal/qbittorrent"
 	"github.com/autobrr/qui/internal/services/crossseed/gazellemusic"
 	"github.com/autobrr/qui/internal/services/jackett"
 	"github.com/autobrr/qui/pkg/stringutils"
@@ -34,9 +34,7 @@ func (s *Service) ApplyTorrentSearchResults(ctx context.Context, instanceID int,
 		return nil, fmt.Errorf("%w: no selections provided", ErrInvalidRequest)
 	}
 
-	torrents, err := s.syncManager.GetTorrents(ctx, instanceID, qbt.TorrentFilterOptions{
-		Hashes: []string{hash},
-	})
+	torrents, err := s.syncManager.GetTorrentRefs(ctx, instanceID, qbittorrent.TorrentRefFilter{Hashes: []string{hash}})
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +110,10 @@ func (s *Service) ApplyTorrentSearchResults(ctx context.Context, instanceID int,
 				return
 			}
 
+			if !cachedResult.SearchDecision.matchesSource(instanceID, hash) {
+				resultChan <- selectionResult{idx, TorrentSearchAddResult{Title: cachedResult.Title, Indexer: cachedResult.Indexer, Error: "file-evidence source binding mismatch"}, nil}
+				return
+			}
 			indexerName := sel.Indexer
 			if indexerName == "" {
 				indexerName = cachedResult.Indexer

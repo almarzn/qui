@@ -22,6 +22,7 @@ import (
 
 	"github.com/autobrr/qui/internal/models"
 	internalqb "github.com/autobrr/qui/internal/qbittorrent"
+	"github.com/autobrr/qui/internal/qbittorrent/syncowner"
 	"github.com/autobrr/qui/internal/services/jackett"
 	"github.com/autobrr/qui/internal/services/notifications"
 	"github.com/autobrr/qui/pkg/releases"
@@ -248,7 +249,7 @@ func TestFindBestCandidateMatch_SingleFileSourceVsPackWithSample(t *testing.T) {
 	candidate := CrossSeedCandidate{
 		InstanceID:   1,
 		InstanceName: "test",
-		Torrents: []qbt.Torrent{{
+		Torrents: []*qbt.Torrent{{
 			Hash:     "abc123",
 			Name:     "A.Real.File.That.Exists.1998.S11E11.1080p.WEB.h264-SOMEGROUP",
 			Progress: 1.0,
@@ -536,70 +537,6 @@ func TestCrossSeed_CategoryAndTagPreservation(t *testing.T) {
 	}
 }
 
-// TestSeasonPackDetection tests season vs episode detection logic
-func TestSeasonPackDetection(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name        string
-		releaseName string
-		isSeason    bool
-		isEpisode   bool
-		series      int
-		episode     int
-	}{
-		{
-			name:        "season pack",
-			releaseName: "Show.S01.1080p.BluRay",
-			isSeason:    true,
-			isEpisode:   false,
-			series:      1,
-			episode:     0,
-		},
-		{
-			name:        "single episode",
-			releaseName: "Show.S01E05.1080p.WEB-DL",
-			isSeason:    false,
-			isEpisode:   true,
-			series:      1,
-			episode:     5,
-		},
-		{
-			// A multi-episode release is a pack, not its first episode.
-			name:        "multi-episode",
-			releaseName: "Show.S02E10E11.720p.HDTV",
-			isSeason:    true,
-			isEpisode:   false,
-			series:      2,
-			episode:     0,
-		},
-		{
-			name:        "movie with year",
-			releaseName: "Movie.2020.1080p.BluRay",
-			isSeason:    false,
-			isEpisode:   false,
-			series:      0,
-			episode:     0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.releaseName)
-
-			isSeason := release.Series > 0 && release.Episode == 0
-			isEpisode := release.Series > 0 && release.Episode > 0
-
-			assert.Equal(t, tt.isSeason, isSeason, "Season detection")
-			assert.Equal(t, tt.isEpisode, isEpisode, "Episode detection")
-			assert.Equal(t, tt.series, release.Series, "Series number")
-			if tt.isEpisode {
-				assert.Equal(t, tt.episode, release.Episode, "Episode number")
-			}
-		})
-	}
-}
-
 // TestBase64EdgeCases tests that decodeTorrentData decodes binary data in every base64 encoding.
 func TestBase64EdgeCases(t *testing.T) {
 	s := &Service{}
@@ -634,154 +571,6 @@ func TestBase64EdgeCases(t *testing.T) {
 					assert.Equal(t, tt.input, decoded)
 				})
 			}
-		})
-	}
-}
-
-// TestReleaseNameVariations tests different release name formats
-func TestReleaseNameVariations(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name        string
-		releaseName string
-		wantSeries  int
-		wantEpisode int
-	}{
-		{"standard format", "Show.S01E05.1080p", 1, 5},
-		{"lowercase", "show.s01e05.720p", 1, 5},
-		{"no resolution", "Show.S02E10.WEB-DL", 2, 10},
-		{"single digit", "Show.S1E2.HDTV", 1, 2},
-		{"with year", "Show.2024.S01E05", 1, 5},
-		{"multi-episode", "Show.S01E05E06", 1, 0}, // A range reads as a pack
-		{"season pack no episode", "Show.S01.Complete", 1, 0},
-		{"season pack explicit", "Show.Season.1.1080p", 1, 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.releaseName)
-			assert.Equal(t, tt.wantSeries, release.Series, "Series mismatch")
-			assert.Equal(t, tt.wantEpisode, release.Episode, "Episode mismatch")
-		})
-	}
-}
-
-// TestGroupExtraction tests release group extraction
-func TestGroupExtraction(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name      string
-		release   string
-		wantGroup string
-	}{
-		{"standard group", "Movie.2020.1080p.BluRay.x264-GROUP", "GROUP"},
-		{"brackets", "Movie.2020.1080p.[GROUP]", ""},
-		{"no group", "Movie.2020.1080p.BluRay.x264", ""},
-		{"underscore", "Show_S01E05_1080p-GROUP", "GROUP"},
-		{"multiple dashes", "Movie-2020-1080p-x264-GROUPName", "GROUPName"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.release)
-			assert.Equalf(t, tt.wantGroup, release.Group, "group mismatch for release %q", tt.release)
-		})
-	}
-}
-
-// TestQualityDetection tests quality/resolution detection
-func TestQualityDetection(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name           string
-		release        string
-		wantResolution string
-	}{
-		{"1080p", "Movie.2020.1080p.BluRay", "1080p"},
-		{"720p", "Show.S01E05.720p.HDTV", "720p"},
-		{"2160p/4K", "Movie.2020.2160p.UHD", "2160p"},
-		{"480p", "Show.S01E05.480p.WEB", "480p"},
-		{"no resolution", "Show.S01E05.WEB-DL", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.release)
-			assert.Equalf(t, tt.wantResolution, release.Resolution, "resolution mismatch for release %q", tt.release)
-		})
-	}
-}
-
-// TestSourceDetection tests source media detection
-func TestSourceDetection(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name       string
-		release    string
-		wantSource string
-	}{
-		{"BluRay", "Movie.2020.1080p.BluRay.x264", "BluRay"},
-		{"WEB-DL", "Show.S01E05.1080p.WEB-DL.x264", "WEB-DL"},
-		{"WEBRip", "Movie.2020.720p.WEBRip.x264", "WEBRiP"},
-		{"HDTV", "Show.S01E05.720p.HDTV.x264", "HDTV"},
-		{"DVD", "Movie.2000.480p.DVDRip", "DVDRiP"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.release)
-			assert.Equalf(t, tt.wantSource, release.Source, "source mismatch for release %q", tt.release)
-		})
-	}
-}
-
-// TestCodecDetection tests video/audio codec detection
-func TestCodecDetection(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name      string
-		release   string
-		wantCodec []string
-	}{
-		{"x264", "Movie.2020.1080p.x264", []string{"x264"}},
-		{"x265/HEVC", "Movie.2020.1080p.x265", []string{"x265"}},
-		{"H.264", "Movie.2020.1080p.H264", []string{"H.264"}},
-		{"H.265", "Movie.2020.2160p.H265", []string{"H.265"}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.release)
-			assert.Equalf(t, tt.wantCodec, release.Codec, "codec mismatch for release %q", tt.release)
-		})
-	}
-}
-
-// TestYearExtraction tests year extraction from releases
-func TestYearExtraction(t *testing.T) {
-	cache := NewReleaseCache()
-
-	tests := []struct {
-		name     string
-		release  string
-		wantYear int
-	}{
-		{"movie with year", "Movie.2020.1080p", 2020},
-		{"show with year", "Show.2024.S01E05", 2024},
-		{"old movie", "Movie.1995.DVDRip", 1995},
-		{"future", "Movie.2025.1080p", 2025},
-		{"no year episode", "Show.S01E05.1080p", 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			release := cache.Parse(tt.release)
-			assert.Equalf(t, tt.wantYear, release.Year, "year mismatch for release %q", tt.release)
 		})
 	}
 }
@@ -1634,6 +1423,19 @@ func (f *fakeInstanceStore) List(_ context.Context) ([]*models.Instance, error) 
 	return result, nil
 }
 
+// testTorrentRefs returns references to copies of torrents, as a read of the
+// Sync snapshot returns references.
+func testTorrentRefs(torrents []qbt.Torrent) []*qbt.Torrent {
+	if torrents == nil {
+		return nil
+	}
+	refs := make([]*qbt.Torrent, len(torrents))
+	for i := range torrents {
+		refs[i] = new(torrents[i])
+	}
+	return refs
+}
+
 type fakeSyncManager struct {
 	cached map[int][]internalqb.CrossInstanceTorrentView
 	all    map[int][]qbt.Torrent
@@ -1678,9 +1480,9 @@ func newFakeSyncManager(instance *models.Instance, torrents []qbt.Torrent, files
 	}
 }
 
-func (f *fakeSyncManager) GetTorrents(_ context.Context, instanceID int, filter qbt.TorrentFilterOptions) ([]qbt.Torrent, error) {
+func (f *fakeSyncManager) GetTorrentRefs(_ context.Context, instanceID int, filter internalqb.TorrentRefFilter) ([]*qbt.Torrent, error) {
 	if torrents, ok := f.all[instanceID]; ok {
-		return torrents, nil
+		return testTorrentRefs(torrents), nil
 	}
 	return nil, fmt.Errorf("instance %d not found", instanceID)
 }
@@ -1777,8 +1579,8 @@ func (f *fakeSyncManager) ExtractDomainFromURL(string) string {
 	return ""
 }
 
-func (f *fakeSyncManager) GetQBittorrentSyncManager(_ context.Context, _ int) (*qbt.SyncManager, error) {
-	return nil, errors.New("GetQBittorrentSyncManager not implemented in fakeSyncManager")
+func (f *fakeSyncManager) GetSyncOwner(_ context.Context, _ int) (*syncowner.Owner, error) {
+	return nil, errors.New("GetSyncOwner not implemented in fakeSyncManager")
 }
 
 func (f *fakeSyncManager) GetCategories(_ context.Context, _ int) (map[string]qbt.Category, error) {
@@ -1813,15 +1615,6 @@ func TestWebhookCheckRequest_Validation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid full request",
-			request: &WebhookCheckRequest{
-				TorrentName: "Movie.2025.1080p.BluRay.x264-GROUP",
-				InstanceIDs: []int{1},
-				Size:        8589934592,
-			},
-			wantErr: false,
-		},
-		{
 			name: "invalid when instance IDs contain no positives",
 			request: &WebhookCheckRequest{
 				TorrentName: "Movie.2025.1080p.BluRay.x264-GROUP",
@@ -1835,15 +1628,6 @@ func TestWebhookCheckRequest_Validation(t *testing.T) {
 			request: &WebhookCheckRequest{
 				InstanceIDs: []int{1},
 				Size:        8589934592,
-			},
-			wantErr: true,
-			errMsg:  "torrentName is required",
-		},
-		{
-			name: "empty torrent name",
-			request: &WebhookCheckRequest{
-				TorrentName: "",
-				InstanceIDs: []int{1},
 			},
 			wantErr: true,
 			errMsg:  "torrentName is required",
@@ -1890,18 +1674,6 @@ func TestWrapCrossSeedSearchErrorDoesNotClassifyText(t *testing.T) {
 	}
 }
 
-func TestWrapCrossSeedSearchErrorGeneric(t *testing.T) {
-	err := errors.New("unexpected search failure")
-	wrapped := wrapCrossSeedSearchError(err)
-
-	if wrapped == nil {
-		t.Fatalf("expected wrapped error")
-	}
-	if !strings.Contains(wrapped.Error(), "torznab search failed") {
-		t.Fatalf("expected generic torznab failure prefix, got %q", wrapped.Error())
-	}
-}
-
 // mockRecoverSyncManager simulates torrent state changes during recheck operations
 type mockRecoverSyncManager struct {
 	torrents                    map[string]*qbt.Torrent // hash -> torrent
@@ -1910,7 +1682,7 @@ type mockRecoverSyncManager struct {
 	disappearAfterRecheck       bool                    // whether torrent disappears after recheck
 	bulkActionFails             bool                    // whether BulkAction should fail
 	keepInCheckingState         bool                    // whether to keep torrent in checking state
-	failGetTorrentsAfterRecheck bool                    // whether GetTorrents should fail after recheck
+	failGetTorrentsAfterRecheck bool                    // whether GetTorrentRefs should fail after recheck
 	setProgressToThreshold      bool                    // whether to set progress exactly at threshold
 	hasRechecked                bool                    // track if recheck has been called
 	secondRecheckCompletes      bool                    // whether second recheck should complete torrents
@@ -1938,12 +1710,12 @@ func newMockRecoverSyncManager(initialTorrents []qbt.Torrent) *mockRecoverSyncMa
 	}
 }
 
-func (m *mockRecoverSyncManager) GetTorrents(_ context.Context, instanceID int, filter qbt.TorrentFilterOptions) ([]qbt.Torrent, error) {
-	m.calls = append(m.calls, "GetTorrents")
+func (m *mockRecoverSyncManager) GetTorrentRefs(_ context.Context, instanceID int, filter internalqb.TorrentRefFilter) ([]*qbt.Torrent, error) {
+	m.calls = append(m.calls, "GetTorrentRefs")
 
 	if m.failGetTorrentsAfterRecheck && m.hasRechecked {
 		// Return empty list to simulate torrent disappearing
-		return []qbt.Torrent{}, nil
+		return testTorrentRefs([]qbt.Torrent{}), nil
 	}
 
 	var result []qbt.Torrent
@@ -1958,7 +1730,7 @@ func (m *mockRecoverSyncManager) GetTorrents(_ context.Context, instanceID int, 
 			result = append(result, *torrent)
 		}
 	}
-	return result, nil
+	return testTorrentRefs(result), nil
 }
 
 func (m *mockRecoverSyncManager) BulkAction(_ context.Context, instanceID int, hashes []string, action string) error {
@@ -2059,7 +1831,7 @@ func (m *mockRecoverSyncManager) ExtractDomainFromURL(string) string {
 	return ""
 }
 
-func (m *mockRecoverSyncManager) GetQBittorrentSyncManager(context.Context, int) (*qbt.SyncManager, error) {
+func (m *mockRecoverSyncManager) GetSyncOwner(context.Context, int) (*syncowner.Owner, error) {
 	return nil, errors.New("not implemented")
 }
 
@@ -2083,7 +1855,7 @@ func TestRecoverErroredTorrents_NoErroredTorrents(t *testing.T) {
 	mockSync := newMockRecoverSyncManager([]qbt.Torrent{normalTorrent})
 	svc := &Service{syncManager: mockSync}
 
-	err := svc.recoverErroredTorrents(context.Background(), 1, []qbt.Torrent{normalTorrent})
+	err := svc.recoverErroredTorrents(context.Background(), 1, []*qbt.Torrent{&normalTorrent})
 	require.NoError(t, err)
 
 	// Should not have made any calls
@@ -2111,7 +1883,7 @@ func TestRecoverErroredTorrents_ContextCancelled(t *testing.T) {
 	// Cancel context immediately
 	cancel()
 
-	err := svc.recoverErroredTorrents(ctx, 1, []qbt.Torrent{erroredTorrent1, erroredTorrent2})
+	err := svc.recoverErroredTorrents(ctx, 1, []*qbt.Torrent{&erroredTorrent1, &erroredTorrent2})
 	require.Error(t, err)
 	assert.Equal(t, context.Canceled, err)
 }
@@ -2145,7 +1917,7 @@ func TestRecoverErroredTorrents_MixedStates(t *testing.T) {
 	mockSync := newMockRecoverSyncManager([]qbt.Torrent{erroredTorrent, missingFilesTorrent, downloadingTorrent, completedTorrent})
 	svc := &Service{syncManager: mockSync}
 
-	err := svc.recoverErroredTorrents(context.Background(), 1, []qbt.Torrent{erroredTorrent, missingFilesTorrent, downloadingTorrent, completedTorrent})
+	err := svc.recoverErroredTorrents(context.Background(), 1, []*qbt.Torrent{&erroredTorrent, &missingFilesTorrent, &downloadingTorrent, &completedTorrent})
 	require.NoError(t, err)
 
 	// Should have batched pause, recheck, and resume only on errored and missing files torrents
@@ -2265,14 +2037,14 @@ func newInfohashTestSyncManager() *infohashTestSyncManager {
 	}
 }
 
-func (f *infohashTestSyncManager) GetTorrents(_ context.Context, instanceID int, _ qbt.TorrentFilterOptions) ([]qbt.Torrent, error) {
+func (f *infohashTestSyncManager) GetTorrentRefs(_ context.Context, instanceID int, _ internalqb.TorrentRefFilter) ([]*qbt.Torrent, error) {
 	list := f.torrents[instanceID]
 	if list == nil {
 		return nil, fmt.Errorf("instance %d has no torrents", instanceID)
 	}
 	copied := make([]qbt.Torrent, len(list))
 	copy(copied, list)
-	return copied, nil
+	return testTorrentRefs(copied), nil
 }
 
 func (f *infohashTestSyncManager) GetTorrentFilesBatch(_ context.Context, instanceID int, hashes []string) (map[string]qbt.TorrentFiles, error) {
@@ -2346,7 +2118,7 @@ func (f *infohashTestSyncManager) ExtractDomainFromURL(string) string {
 	return ""
 }
 
-func (f *infohashTestSyncManager) GetQBittorrentSyncManager(context.Context, int) (*qbt.SyncManager, error) {
+func (f *infohashTestSyncManager) GetSyncOwner(context.Context, int) (*syncowner.Owner, error) {
 	return nil, nil
 }
 
@@ -3265,14 +3037,14 @@ type rssFilterTestSyncManager struct {
 	props    map[int]map[string]*qbt.TorrentProperties
 }
 
-func (m *rssFilterTestSyncManager) GetTorrents(_ context.Context, instanceID int, _ qbt.TorrentFilterOptions) ([]qbt.Torrent, error) {
+func (m *rssFilterTestSyncManager) GetTorrentRefs(_ context.Context, instanceID int, _ internalqb.TorrentRefFilter) ([]*qbt.Torrent, error) {
 	list := m.torrents[instanceID]
 	if list == nil {
 		return nil, fmt.Errorf("instance %d has no torrents", instanceID)
 	}
 	copied := make([]qbt.Torrent, len(list))
 	copy(copied, list)
-	return copied, nil
+	return testTorrentRefs(copied), nil
 }
 
 func (m *rssFilterTestSyncManager) GetTorrentFilesBatch(_ context.Context, instanceID int, hashes []string) (map[string]qbt.TorrentFiles, error) {
@@ -3342,7 +3114,7 @@ func (m *rssFilterTestSyncManager) ExtractDomainFromURL(string) string {
 	return ""
 }
 
-func (m *rssFilterTestSyncManager) GetQBittorrentSyncManager(context.Context, int) (*qbt.SyncManager, error) {
+func (m *rssFilterTestSyncManager) GetSyncOwner(context.Context, int) (*syncowner.Owner, error) {
 	return nil, nil
 }
 

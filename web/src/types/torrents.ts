@@ -146,6 +146,8 @@ export interface Torrent {
   trackers_count: number
   trackers?: TorrentTracker[]
   tracker_health?: "unregistered" | "tracker_down" | "tracker_error"
+  /** Set only on a torrent that qui added for a Transfer or a Share: the owner kind from the helper registry. */
+  qui_helper?: "transfer" | "share"
   up_limit: number
   uploaded: number
   uploaded_session: number
@@ -181,6 +183,10 @@ export interface TorrentStats {
   totalSize?: number
   totalRemainingSize?: number
   totalSeedingSize?: number
+  // Set when the request asks for the Unique size and a Copy groups build that
+  // read the instance has ended.
+  uniqueSize?: number
+  uniqueSeedingSize?: number
 }
 
 export interface CacheMetadata {
@@ -188,15 +194,6 @@ export interface CacheMetadata {
   age: number
   isStale: boolean
   nextRefresh?: string
-}
-
-export interface TrackerTransferStats {
-  uploaded: number
-  downloaded: number
-  uploadedSession: number
-  downloadedSession: number
-  totalSize: number
-  count: number
 }
 
 /**
@@ -212,7 +209,6 @@ export interface TorrentCounts {
   tags: Record<string, number>
   tagSizes?: Record<string, number>
   trackers: Record<string, number>
-  trackerTransfers?: Record<string, TrackerTransferStats>
   total: number
 }
 
@@ -253,10 +249,6 @@ export interface FilterViewInput {
   filters: Partial<TorrentFilters>
 }
 
-/**
- * Real-time instance auth/decryption and connection metadata emitted on torrent
- * stream snapshots.
- */
 export interface InstanceMeta {
   connected: boolean
   hasDecryptionError: boolean
@@ -265,9 +257,6 @@ export interface InstanceMeta {
   connectionStatus?: string
 }
 
-/**
- * Torrent list response shared by REST and stream snapshots.
- */
 export interface TorrentResponse {
   torrents: Torrent[]
   crossInstanceTorrents?: CrossInstanceTorrent[]
@@ -287,7 +276,7 @@ export interface TorrentResponse {
   partialResults?: boolean
   trackerHealthSupported?: boolean
   isCrossInstance?: boolean
-  instanceMeta?: InstanceMeta  // Real-time instance health from SSE
+  instanceMeta?: InstanceMeta
   /** Web API version of each instance in the response, keyed by instance ID; "" while unknown. */
   webAPIVersions?: Record<number, string>
   /** Frontend-assembled only: number of pages combined into this loaded-window response. */
@@ -357,7 +346,6 @@ export interface TorrentStreamPayload {
   error?: string
 }
 
-// Simplified MainData - only used for Dashboard server stats
 export interface MainData {
   rid: number
   serverState?: ServerState
@@ -397,6 +385,12 @@ export interface ServerState {
   write_cache_overload?: string
   last_external_address_v4?: string
   last_external_address_v6?: string
+}
+
+/** The disk of the default save path of an instance. Both fields are null when qui cannot read the disk. */
+export interface InstanceDisk {
+  freeBytes: number | null
+  totalBytes: number | null
 }
 
 export interface TransferInfo {

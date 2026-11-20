@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 	"github.com/autobrr/qui/internal/services/activity"
 	"github.com/autobrr/qui/internal/services/jackett"
 	"github.com/autobrr/qui/pkg/redact"
@@ -24,7 +25,7 @@ import (
 
 type automationInstanceSnapshot struct {
 	instance *models.Instance
-	torrents []qbt.Torrent
+	torrents []*qbt.Torrent
 }
 
 type automationSnapshots struct {
@@ -70,8 +71,8 @@ func (s *Service) StartAutomation(ctx context.Context) {
 	s.automationMu.Lock()
 	defer s.automationMu.Unlock()
 
-	if s.automationStore == nil || s.jackettService == nil {
-		log.Warn().Msg("Cross-seed automation disabled: missing store or Jackett service")
+	if s.automationStore == nil {
+		log.Warn().Msg("Cross-seed automation disabled: missing store")
 		return
 	}
 
@@ -82,6 +83,13 @@ func (s *Service) StartAutomation(ctx context.Context) {
 	loopCtx, cancel := context.WithCancel(ctx)
 	s.automationCancel = cancel
 
+	// The Library Scan schedule can run on RED/OPS alone.
+	go s.libraryScheduleLoop(loopCtx)
+
+	if s.jackettService == nil {
+		log.Warn().Msg("Cross-seed RSS automation disabled: missing Jackett service")
+		return
+	}
 	go s.automationLoop(loopCtx)
 }
 
@@ -603,7 +611,7 @@ func (s *Service) executeAutomationRun(ctx context.Context, run *models.CrossSee
 		run.TotalFeedItems++
 
 		if alreadyHandled && lastStatus == models.CrossSeedFeedItemStatusProcessed {
-			s.markFeedItem(ctx, result, lastStatus, lastStatus, run.ID, nil)
+			s.markFeedItem(ctx, result, lastStatus, lastStatus, nil)
 			continue
 		}
 
@@ -616,7 +624,7 @@ func (s *Service) executeAutomationRun(ctx context.Context, run *models.CrossSee
 		}
 
 		processed++
-		s.markFeedItem(ctx, result, lastStatus, status, run.ID, infoHash)
+		s.markFeedItem(ctx, result, lastStatus, status, infoHash)
 	}
 
 	completed := time.Now().UTC()
@@ -841,8 +849,7 @@ func (s *Service) processAutomationCandidate(ctx context.Context, run *models.Cr
 			found := false
 			var matchedTorrent *qbt.Torrent
 
-			for i := range candidate.Torrents {
-				t := &candidate.Torrents[i]
+			for _, t := range candidate.Torrents {
 				if t.Comment != "" && strings.Contains(t.Comment, commentURL) {
 					found = true
 					matchedTorrent = t
@@ -957,12 +964,12 @@ func (s *Service) processAutomationCandidate(ctx context.Context, run *models.Cr
 		run.Results = append(run.Results, mapped)
 
 		switch instanceResult.class() {
-		case classAdded:
+		case ClassAdded:
 			itemHasSuccess = true
 			run.CrossSeedsAdded++
-		case classExists:
+		case ClassExists:
 			itemHadExisting = true
-		case classSkipped:
+		case ClassSkipped:
 		default:
 			itemHasFailure = true
 		}
@@ -992,7 +999,7 @@ func (s *Service) processAutomationCandidate(ctx context.Context, run *models.Cr
 // or pending when the item has no row. Skipped and failed items are retried
 // on every poll, so an unchanged outcome only refreshes last_seen_at: the
 // full upsert would rewrite and lock every feed row on every poll.
-func (s *Service) markFeedItem(ctx context.Context, result jackett.SearchResult, previous, status models.CrossSeedFeedItemStatus, runID int64, infoHash *string) {
+func (s *Service) markFeedItem(ctx context.Context, result jackett.SearchResult, previous, status models.CrossSeedFeedItemStatus, infoHash *string) {
 	if s.automationStore == nil {
 		return
 	}
@@ -1004,17 +1011,11 @@ func (s *Service) markFeedItem(ctx context.Context, result jackett.SearchResult,
 		return
 	}
 
-	var runPtr *int64
-	if runID > 0 {
-		runPtr = &runID
-	}
-
 	item := &models.CrossSeedFeedItem{
 		GUID:       result.GUID,
 		IndexerID:  result.IndexerID,
 		Title:      result.Title,
 		LastStatus: status,
-		LastRunID:  runPtr,
 		InfoHash:   infoHash,
 	}
 
@@ -1079,7 +1080,7 @@ func (s *Service) buildAutomationSnapshots(ctx context.Context, targetInstanceID
 			snapshots.instances[instanceID] = snap
 		}
 
-		torrents, err := s.syncManager.GetTorrents(ctx, instanceID, qbt.TorrentFilterOptions{Filter: qbt.TorrentFilterAll})
+		torrents, err := s.syncManager.GetTorrentRefs(ctx, instanceID, qbittorrent.TorrentRefFilter{})
 		if err != nil {
 			log.Warn().
 				Err(err).
@@ -1093,12 +1094,12 @@ func (s *Service) buildAutomationSnapshots(ctx context.Context, targetInstanceID
 		if hasRSSSourceFilters {
 			var counts sourceFilterCounts
 			originalCount := len(torrents)
-			filtered := make([]qbt.Torrent, 0, len(torrents))
-			for i := range torrents {
-				kept := rssFilter.match(&torrents[i])
-				counts.add(torrents[i].Category, kept)
+			filtered := make([]*qbt.Torrent, 0, len(torrents))
+			for _, torrent := range torrents {
+				kept := rssFilter.match(torrent)
+				counts.add(torrent.Category, kept)
 				if kept {
-					filtered = append(filtered, torrents[i])
+					filtered = append(filtered, torrent)
 				}
 			}
 			torrents = filtered
@@ -1162,8 +1163,7 @@ func (s *Service) findRSSAnnouncementMatches(ctx context.Context, result jackett
 		if snapshot == nil || snapshot.instance == nil {
 			continue
 		}
-		for i := range snapshot.torrents {
-			torrent := &snapshot.torrents[i]
+		for _, torrent := range snapshot.torrents {
 			if gate.check(torrent, rssFilter) != sourcePass {
 				continue
 			}
@@ -1186,7 +1186,7 @@ func (s *Service) findRSSAnnouncementMatches(ctx context.Context, result jackett
 			match := boundAnnouncementMatch{
 				instanceID:   snapshot.instance.ID,
 				instanceName: snapshot.instance.Name,
-				torrent:      *torrent,
+				torrent:      torrent,
 				decision:     decision.decision.provenance().bindSource(snapshot.instance.ID, torrent.Hash),
 			}
 			matches = append(matches, match)

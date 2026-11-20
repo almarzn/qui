@@ -4,6 +4,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -13,8 +14,10 @@ import (
 	"time"
 
 	"github.com/CAFxX/httpcompression"
+	httpzstd "github.com/CAFxX/httpcompression/contrib/klauspost/zstd"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/klauspost/compress/zstd"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -25,6 +28,7 @@ import (
 	"github.com/autobrr/qui/internal/auth"
 	"github.com/autobrr/qui/internal/backups"
 	"github.com/autobrr/qui/internal/config"
+	"github.com/autobrr/qui/internal/experimental"
 	"github.com/autobrr/qui/internal/fsops"
 	"github.com/autobrr/qui/internal/models"
 	"github.com/autobrr/qui/internal/proxy"
@@ -34,18 +38,25 @@ import (
 	"github.com/autobrr/qui/internal/services/automations"
 	"github.com/autobrr/qui/internal/services/crossseed"
 	"github.com/autobrr/qui/internal/services/crossseedroute"
+	"github.com/autobrr/qui/internal/services/dbshrink"
 	"github.com/autobrr/qui/internal/services/dirscan"
 	"github.com/autobrr/qui/internal/services/discscan"
 	"github.com/autobrr/qui/internal/services/externalprograms"
 	"github.com/autobrr/qui/internal/services/filesmanager"
 	"github.com/autobrr/qui/internal/services/jackett"
 	"github.com/autobrr/qui/internal/services/license"
+	"github.com/autobrr/qui/internal/services/livesamples"
 	"github.com/autobrr/qui/internal/services/notifications"
 	"github.com/autobrr/qui/internal/services/orphanscan"
 	"github.com/autobrr/qui/internal/services/peerclienticons"
+	"github.com/autobrr/qui/internal/services/problemreport"
 	"github.com/autobrr/qui/internal/services/reannounce"
+	"github.com/autobrr/qui/internal/services/share"
 	"github.com/autobrr/qui/internal/services/spacemgmt"
+	"github.com/autobrr/qui/internal/services/systemnotice"
 	"github.com/autobrr/qui/internal/services/trackericons"
+	"github.com/autobrr/qui/internal/services/transfer"
+	"github.com/autobrr/qui/internal/services/transferhistory"
 	"github.com/autobrr/qui/internal/sshpool"
 	"github.com/autobrr/qui/internal/update"
 	"github.com/autobrr/qui/internal/web"
@@ -54,11 +65,12 @@ import (
 )
 
 type Server struct {
-	server  *http.Server
-	logger  zerolog.Logger
-	config  *config.AppConfig
-	version string
-	started time.Time
+	server       *http.Server
+	logger       zerolog.Logger
+	config       *config.AppConfig
+	experimental *experimental.Features
+	version      string
+	started      time.Time
 
 	authService                      *auth.Service
 	sessionManager                   *scs.SessionManager
@@ -102,6 +114,14 @@ type Server struct {
 	orphanScanService                *orphanscan.Service
 	discScanStore                    *models.DiscScanStore
 	discScanService                  *discscan.Service
+	transferHistory                  *transferhistory.Module
+	transfers                        *transfer.Store
+	transferService                  *transfer.Service
+	shareService                     *share.Service
+	liveSamples                      *livesamples.Recorder
+	systemNotices                    *systemnotice.Module
+	databaseShrink                   *dbshrink.Service
+	problemReports                   *problemreport.Service
 	backendPool                      *fsops.Pool
 	sshPool                          *sshpool.Pool
 	dirScanService                   *dirscan.Service
@@ -114,6 +134,7 @@ type Server struct {
 
 type Dependencies struct {
 	Config                           *config.AppConfig
+	Experimental                     *experimental.Features
 	Version                          string
 	AuthService                      *auth.Service
 	SessionManager                   *scs.SessionManager
@@ -157,18 +178,31 @@ type Dependencies struct {
 	OrphanScanService                *orphanscan.Service
 	DiscScanStore                    *models.DiscScanStore
 	DiscScanService                  *discscan.Service
-	BackendPool                      *fsops.Pool
-	SSHPool                          *sshpool.Pool
-	DirScanService                   *dirscan.Service
-	ArrInstanceStore                 *models.ArrInstanceStore
-	ArrService                       *arr.Service
-	ActivityHub                      *activity.Hub
+	TransferHistory                  *transferhistory.Module
+	LiveSamples                      *livesamples.Recorder
+	SystemNotices                    *systemnotice.Module
+	DatabaseShrink                   *dbshrink.Service
+	ProblemReports                   *problemreport.Service
+	// StartedAt is when qui started. Zero means when NewServer runs.
+	StartedAt        time.Time
+	BackendPool      *fsops.Pool
+	SSHPool          *sshpool.Pool
+	DirScanService   *dirscan.Service
+	ArrInstanceStore *models.ArrInstanceStore
+	ArrService       *arr.Service
+	ActivityHub      *activity.Hub
+	// Transfers holds the Transfer records and the helper registry.
+	Transfers *transfer.Store
+	// TransferService runs Transfers.
+	TransferService *transfer.Service
+	// ShareService runs Shares.
+	ShareService *share.Service
 }
 
 func NewServer(deps *Dependencies) *Server {
 	streamManager := sse.NewStreamManager(deps.ClientPool, deps.SyncManager, deps.SyncManager, deps.InstanceStore)
 	if deps.ClientPool != nil {
-		deps.ClientPool.SetSyncEventSink(streamManager)
+		deps.ClientPool.AddSyncEventSink(streamManager)
 	}
 	if deps.ActivityHub != nil {
 		streamManager.SetActivityHub(deps.ActivityHub)
@@ -192,8 +226,9 @@ func NewServer(deps *Dependencies) *Server {
 		},
 		logger:                           log.Logger.With().Str("module", "api").Logger(),
 		config:                           deps.Config,
+		experimental:                     deps.Experimental,
 		version:                          deps.Version,
-		started:                          time.Now().UTC(),
+		started:                          cmp.Or(deps.StartedAt, time.Now()).UTC(),
 		authService:                      deps.AuthService,
 		sessionManager:                   deps.SessionManager,
 		instanceStore:                    deps.InstanceStore,
@@ -236,18 +271,42 @@ func NewServer(deps *Dependencies) *Server {
 		orphanScanService:                deps.OrphanScanService,
 		discScanStore:                    deps.DiscScanStore,
 		discScanService:                  deps.DiscScanService,
+		transferHistory:                  deps.TransferHistory,
+		liveSamples:                      deps.LiveSamples,
+		systemNotices:                    deps.SystemNotices,
+		databaseShrink:                   deps.DatabaseShrink,
+		problemReports:                   deps.ProblemReports,
 		backendPool:                      deps.BackendPool,
 		sshPool:                          deps.SSHPool,
 		dirScanService:                   deps.DirScanService,
 		arrInstanceStore:                 deps.ArrInstanceStore,
 		arrService:                       deps.ArrService,
 		activityHub:                      deps.ActivityHub,
+		transfers:                        deps.Transfers,
+		transferService:                  deps.TransferService,
+		shareService:                     deps.ShareService,
 		shuttingDown:                     streamsCtx.Done(),
 	}
 	// Shutdown runs this callback on every call; a CancelFunc tolerates repeats where close would panic.
 	s.server.RegisterOnShutdown(stopStreams)
 
 	return &s
+}
+
+// transferRoutes adds the Transfer and Share routes.
+func (s *Server) transferRoutes(r chi.Router) {
+	r.Route("/transfers", handlers.NewTransfersHandler(s.transferService, s.transfers, s.automationStore).Routes)
+	r.Route("/shares", handlers.NewSharesHandler(s.shareService).Routes)
+}
+
+// newTorrentsHandler builds the handler of the torrent routes. It refuses to
+// change a torrent that a Transfer holds, and a helper torrent.
+func (s *Server) newTorrentsHandler() *handlers.TorrentsHandler {
+	torrentsHandler := handlers.NewTorrentsHandler(s.syncManager, s.jackettService, s.instanceStore, s.crossSeedService)
+	if s.transfers != nil {
+		torrentsHandler.SetHeldTorrents(s.transfers)
+	}
+	return torrentsHandler
 }
 
 // ListenAndServeReady behaves like ListenAndServe but signals once the listener is active.
@@ -327,6 +386,20 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
+func newCompressionMiddleware() (func(http.Handler) http.Handler, error) {
+	// The default 8 MB zstd window allocates a 16 MB history buffer per pooled encoder.
+	zstdCompressor, err := httpzstd.New(zstd.WithWindowSize(1<<20), zstd.WithLowerEncoderMem(true))
+	if err != nil {
+		return nil, err
+	}
+	return httpcompression.DefaultAdapter(
+		httpcompression.MinSize(1024),
+		httpcompression.GzipCompressionLevel(2), // Use gzip level 2 (fast) instead of 6 (default)
+		httpcompression.ZstandardCompressor(zstdCompressor),
+		httpcompression.Prefer(httpcompression.PreferServer),
+	)
+}
+
 func (s *Server) Handler() (*chi.Mux, error) {
 	s.config.PublishConfig()
 	r := chi.NewRouter()
@@ -345,13 +418,7 @@ func (s *Server) Handler() (*chi.Mux, error) {
 	r.Use(middleware.RequireAuthDisabledIPAllowlist(s.config.Config))
 	r.Use(middleware.RealIP)
 
-	// HTTP compression - handles gzip, brotli, zstd, deflate automatically
-	// Use faster compression levels for better proxy performance
-	compressor, err := httpcompression.DefaultAdapter(
-		httpcompression.MinSize(1024),                        // Only compress responses >= 1KB
-		httpcompression.GzipCompressionLevel(2),              // Use gzip level 2 (fast) instead of 6 (default)
-		httpcompression.Prefer(httpcompression.PreferServer), // Let server choose best compression
-	)
+	compressor, err := newCompressionMiddleware()
 	var compression chi.Middlewares
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create HTTP compression adapter")
@@ -384,14 +451,15 @@ func (s *Server) Handler() (*chi.Mux, error) {
 	instancesHandler := handlers.NewInstancesHandler(s.instanceStore, s.instanceReannounce, s.reannounceCache, s.clientPool, s.syncManager, s.reannounceService, sshpool.NewDialer(s.instanceStore), s.sshPool)
 	instancesHandler.SetOrphanScan(s.orphanScanService)
 	instancesHandler.SetCrossSeedRoutes(s.crossSeedRoutes)
-	torrentsHandler := handlers.NewTorrentsHandler(s.syncManager, s.jackettService, s.instanceStore, s.crossSeedService)
+	instancesHandler.SetFilesystem(s.backendPool)
+	torrentsHandler := s.newTorrentsHandler()
 	preferencesHandler := handlers.NewPreferencesHandler(s.syncManager)
 	clientAPIKeysHandler := handlers.NewClientAPIKeysHandler(s.clientAPIKeyStore, s.instanceStore, s.config.Config.BaseURL)
 	externalProgramsHandler := handlers.NewExternalProgramsHandler(s.externalProgramStore, s.externalProgramService, s.clientPool, s.automationStore)
 	arrHandler := handlers.NewArrHandler(s.arrInstanceStore, s.arrService)
 	versionHandler := handlers.NewVersionHandler(s.updateService, s.version, s.updateAvailability)
 	systemHandler := handlers.NewSystemHandler(s.updateAvailability, s.restarter, s.selfUpdater)
-	applicationHandler := handlers.NewApplicationHandler(s.config, s.started)
+	applicationHandler := handlers.NewApplicationHandler(s.config, s.experimental, s.started)
 	qbittorrentInfoHandler := handlers.NewQBittorrentInfoHandler(s.clientPool)
 	backupsHandler := handlers.NewBackupsHandler(s.backupService)
 	trackerIconHandler := handlers.NewTrackerIconHandler(s.trackerIconService)
@@ -411,8 +479,14 @@ func (s *Server) Handler() (*chi.Mux, error) {
 		s.syncManager,
 	)
 	automationsHandler := handlers.NewAutomationHandler(s.automationStore, s.automationActivityStore, s.instanceStore, s.externalProgramStore, s.automationService)
+	automationsHandler.SetCrossSeedRoutes(s.crossSeedRoutes)
 	orphanScanHandler := handlers.NewOrphanScanHandler(s.orphanScanStore, s.instanceStore, s.orphanScanService)
 	discScanHandler := handlers.NewDiscScanHandler(s.discScanService, s.discScanStore, s.syncManager, s.backendPool)
+	transferHistoryHandler := handlers.NewTransferHistoryHandler(s.transferHistory)
+	liveSamplesHandler := handlers.NewLiveSamplesHandler(s.liveSamples)
+	systemNoticeHandler := handlers.NewSystemNoticeHandler(s.systemNotices)
+	databaseShrinkHandler := handlers.NewDatabaseShrinkHandler(s.databaseShrink)
+	trackerGroupsHandler := handlers.NewTrackerGroupsHandler(s.syncManager, s.trackerCustomizationStore)
 	var dirScanHandler *handlers.DirScanHandler
 	if s.dirScanService != nil {
 		dirScanHandler = handlers.NewDirScanHandler(s.dirScanService, s.instanceStore)
@@ -525,8 +599,11 @@ func (s *Server) Handler() (*chi.Mux, error) {
 
 			r.With(browserOnly).Route("/license", licenseHandler.Routes)
 
-			// Sideloaded custom themes (premium-gated inside the handler)
+			// Custom themes (premium-gated inside the handler)
 			r.Get("/themes/custom", themesHandler.ListCustomThemes)
+			r.With(settings.Write).Post("/themes/custom", themesHandler.CreateCustomTheme)
+			r.With(settings.Write).Put("/themes/custom/{id}", themesHandler.ReplaceCustomTheme)
+			r.With(settings.Write).Delete("/themes/custom/{id}", themesHandler.DeleteCustomTheme)
 
 			// Persisted theme selection (reads are public above)
 			r.With(settings.Write).Put("/themes/settings", themesHandler.UpdateThemeSettings)
@@ -621,6 +698,8 @@ func (s *Server) Handler() (*chi.Mux, error) {
 			// Version endpoints (current running version + update checks)
 			r.Get("/version", versionHandler.GetVersion)
 			r.Get("/version/latest", versionHandler.GetLatestVersion)
+			r.With(system.Read).Get("/system-notices", systemNoticeHandler.List)
+			r.With(settings.Write).Delete("/system-notices/{kind}", systemNoticeHandler.Dismiss)
 			r.With(system.Read).Get("/application/info", applicationHandler.GetInfo)
 			r.With(browserOnly).Post("/system/restart", systemHandler.Restart)
 			r.With(browserOnly).Post("/system/update", systemHandler.Update)
@@ -687,6 +766,8 @@ func (s *Server) Handler() (*chi.Mux, error) {
 
 					r.With(instances.Read).Get("/capabilities", instancesHandler.GetInstanceCapabilities)
 					r.With(instances.Read).Get("/transfer-info", instancesHandler.GetTransferInfo)
+					r.With(instances.Read).Get("/free-space", instancesHandler.GetFreeSpaceAtPath)
+					r.With(instances.Read).Get("/disk", instancesHandler.GetDisk)
 					r.With(instances.Read).Get("/reannounce/activity", instancesHandler.GetReannounceActivity)
 					r.With(instances.Read).Get("/reannounce/candidates", instancesHandler.GetReannounceCandidates)
 
@@ -711,6 +792,11 @@ func (s *Server) Handler() (*chi.Mux, error) {
 
 					// Trackers
 					r.With(torrents.Read).Get("/trackers", torrentsHandler.GetActiveTrackers)
+
+					r.With(torrents.Read).Get("/transfer-history", transferHistoryHandler.Transfer)
+					r.With(torrents.Read).Get("/transfer-history/library", transferHistoryHandler.Library)
+					r.With(torrents.Read).Get("/transfer-history/deletes", transferHistoryHandler.Deletes)
+					r.With(torrents.Read).Get("/tracker-groups", trackerGroupsHandler.List)
 
 					// Automations
 					r.Route("/automations", func(r chi.Router) {
@@ -814,6 +900,26 @@ func (s *Server) Handler() (*chi.Mux, error) {
 			r.Route("/torrents", func(r chi.Router) {
 				r.With(allInstances, torrents.Read).Get("/cross-instance", torrentsHandler.ListCrossInstanceTorrents)
 				r.With(allInstances, torrents.Write).Post("/export", torrentsHandler.ExportTorrentArchive)
+			})
+
+			r.With(allInstances, instances.Read).Get("/live-samples", liveSamplesHandler.List)
+			r.With(allInstances, torrents.Read).Get("/transfer-history/status", transferHistoryHandler.Status)
+			r.With(allInstances, settings.Write).Put("/transfer-history/settings", transferHistoryHandler.UpdateSettings)
+			r.With(allInstances, settings.Write).Delete("/transfer-history", transferHistoryHandler.DeleteHistory)
+			r.With(allInstances, settings.Read).Get("/database/shrink", databaseShrinkHandler.Status)
+			r.With(browserOnly).Post("/database/shrink", databaseShrinkHandler.Request)
+			r.With(allInstances, settings.Write).Delete("/database/shrink/result", databaseShrinkHandler.DismissResult)
+			s.transferRoutes(r.With(browserOnly))
+
+			r.Route("/problem-reports", func(r chi.Router) {
+				r.Use(s.experimental.Require(experimental.ProblemReports), browserOnly, handlers.RequireProblemReports(func() bool {
+					return s.config.Config.ProblemReports
+				}))
+				problemReportHandler := handlers.NewProblemReportHandler(s.problemReports)
+				r.Get("/facts", problemReportHandler.Facts)
+				r.Post("/", problemReportHandler.Send)
+				r.Get("/", problemReportHandler.SentReports)
+				r.Delete("/{id}", problemReportHandler.Delete)
 			})
 		})
 	})

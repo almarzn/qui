@@ -20,6 +20,7 @@ import (
 
 	"github.com/autobrr/qui/internal/api/ctxkeys"
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 )
 
 // changeStream is an open stream that also takes subscription changes.
@@ -152,7 +153,7 @@ func TestSubscriptionChangeOnOpenStream(t *testing.T) {
 			"connectionId": stream.connectionID,
 			"add":          []map[string]any{detailsStream(instanceID, "details-a", "aaa")},
 		}))
-		manager.HandleMainData(instanceID, &qbt.MainData{Rid: 1})
+		manager.HandleSyncUpdate(instanceID, qbt.SyncUpdate{})
 		frames := stream.dataFrames(t, time.Second)
 		require.Equal(t, streamEventInit, frames["details-a"][0], "the init comes first")
 		require.NotContains(t, frames["main"], streamEventInit)
@@ -166,7 +167,7 @@ func TestSubscriptionChangeOnOpenStream(t *testing.T) {
 		frames = stream.dataFrames(t, time.Second)
 		require.Equal(t, map[string][]string{"details-b": {streamEventInit}}, frames)
 
-		manager.HandleMainData(instanceID, &qbt.MainData{Rid: 2})
+		manager.HandleSyncUpdate(instanceID, qbt.SyncUpdate{})
 		frames = stream.dataFrames(t, time.Second)
 		require.NotEmpty(t, frames["main"])
 		require.NotEmpty(t, frames["details-b"])
@@ -205,7 +206,7 @@ func TestSubscriptionChangeOnlyFromTheOpener(t *testing.T) {
 				require.Equal(t, tc.wantStatus, w.Code)
 				synctest.Wait()
 
-				manager.HandleMainData(1, &qbt.MainData{Rid: 1})
+				manager.HandleSyncUpdate(1, qbt.SyncUpdate{})
 				frames := stream.dataFrames(t, time.Second)
 				if tc.wantStatus == http.StatusNotFound {
 					require.NotEmpty(t, frames["main"], "the opener keeps its subscription")
@@ -270,7 +271,7 @@ func TestRemovedSubscriptionGetsNoFrameFromBuildInFlight(t *testing.T) {
 
 		// The tick of the details view is in its build when the view leaves.
 		release := provider.gateTorrentBuilds()
-		manager.HandleMainData(instanceID, &qbt.MainData{Rid: 1})
+		manager.HandleSyncUpdate(instanceID, qbt.SyncUpdate{})
 		synctest.Wait()
 		require.Equal(t, http.StatusNoContent, stream.change(t, map[string]any{
 			"connectionId": stream.connectionID,
@@ -324,4 +325,68 @@ func TestSubscriptionChangeBeforeSessionSubscribes(t *testing.T) {
 		frames := stream.dataFrames(t, time.Second)
 		require.Equal(t, []string{streamEventInit}, frames["details"])
 	})
+}
+
+func TestStreamFrameReadsTheCacheWithThePasskeyAccessOfItsSubscriber(t *testing.T) {
+	torrentsRead := &models.APIKey{ID: 8, Permissions: []models.Permission{{Area: models.AreaTorrents, Level: models.LevelRead}}}
+	torrentsWrite := &models.APIKey{ID: 9, Permissions: []models.Permission{{Area: models.AreaTorrents, Level: models.LevelWrite}}}
+
+	for _, tc := range []struct {
+		name     string
+		key      *models.APIKey
+		wantFull bool
+	}{
+		{"a browser session", nil, true},
+		{"a key with Torrents: read", torrentsRead, false},
+		{"a key with Torrents: write", torrentsWrite, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				provider := &fakeSyncProvider{torrentsResponse: cannedResponse()}
+				manager := newIdleTestManager(t, provider)
+				stream := openChangeStreamAs(t, manager, tc.key, streamPayload(1, "main"))
+				stream.waitForEvent(t, streamEventInit, time.Second)
+				synctest.Wait()
+				frameView := func() qbittorrent.TorrentListView {
+					provider.mu.Lock()
+					defer provider.mu.Unlock()
+					return provider.torrentsView
+				}
+				require.True(t, frameView().CacheOnly, "the init frame")
+				require.Equal(t, tc.wantFull, frameView().FullPasskeyAccess, "the init frame")
+				builds := provider.torrentsCallCount()
+
+				manager.HandleSyncUpdate(1, qbt.SyncUpdate{})
+				require.NotEmpty(t, stream.dataFrames(t, time.Second)["main"])
+				require.Greater(t, provider.torrentsCallCount(), builds)
+				require.True(t, frameView().CacheOnly, "the tick frame")
+				require.Equal(t, tc.wantFull, frameView().FullPasskeyAccess, "the tick frame")
+			})
+		})
+	}
+}
+
+func TestServeRejectsASummaryThatCannotBeRead(t *testing.T) {
+	manager := NewStreamManager(nil, &fakeSyncProvider{}, &fakeSyncProvider{}, fakeInstanceStore{})
+	t.Cleanup(func() { _ = manager.Shutdown(context.Background()) })
+
+	for _, tc := range []struct {
+		name  string
+		entry map[string]any
+		want  string
+	}{
+		{"the Unified view", map[string]any{"instanceIds": []int{1, 2}, "summary": true}, "summary needs a single instance"},
+		{"Copy groups", map[string]any{"instanceId": 1, "summary": true, "groupCopies": true}, "summary has no rows to group"},
+		{"both rules apply and the Copy groups text wins, as before", map[string]any{"instanceIds": []int{1, 2}, "summary": true, "groupCopies": true}, "summary has no rows to group"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/stream?streams="+streamsQuery(t, []map[string]any{tc.entry}), nil)
+
+			manager.Serve(recorder, request)
+
+			require.Equal(t, http.StatusBadRequest, recorder.Code)
+			require.Equal(t, tc.want+"\n", recorder.Body.String())
+		})
+	}
 }

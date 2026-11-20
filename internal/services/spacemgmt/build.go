@@ -286,13 +286,15 @@ func (s *Service) fetchQbit(ctx context.Context, src *qbitSource) {
 	if backend, _, err := s.backends.Resolve(ctx, src.instance.ID); err == nil {
 		src.backend = backend
 	}
-	torrents, err := s.torrents.GetAllTorrents(ctx, src.instance.ID)
+	refs, err := s.torrents.GetAllTorrentRefs(ctx, src.instance.ID)
 	if err != nil {
 		src.err = err
 		return
 	}
-	hashes := make([]string, len(torrents))
-	for i, t := range torrents {
+	torrents := make([]qbt.Torrent, len(refs))
+	hashes := make([]string, len(refs))
+	for i, t := range refs {
+		torrents[i] = *t
 		hashes[i] = t.Hash
 	}
 	files, err := s.torrents.GetTorrentFilesBatch(ctx, src.instance.ID, hashes)

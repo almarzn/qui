@@ -16,7 +16,6 @@ import (
 	"golang.org/x/net/idna"
 )
 
-// Config represents the application configuration
 type Config struct {
 	Version            string
 	Host               string   `toml:"host" mapstructure:"host"`
@@ -25,6 +24,8 @@ type Config struct {
 	CORSAllowedOrigins []string `toml:"corsAllowedOrigins" mapstructure:"corsAllowedOrigins"`
 	// Loaded once at startup, so mapstructure skips it on reload.
 	AllowedHosts []string `toml:"allowedHosts" mapstructure:"-"`
+	// Loaded once at startup, so mapstructure skips it on reload.
+	ExperimentalFeatures []string `toml:"experimentalFeatures" mapstructure:"-"`
 	//nolint:gosec // Config schema requires this field name; value is provided by runtime configuration.
 	SessionSecret            string `toml:"sessionSecret" mapstructure:"sessionSecret"`
 	SessionCookieSecure      bool   `toml:"sessionCookieSecure" mapstructure:"sessionCookieSecure"`
@@ -49,6 +50,8 @@ type Config struct {
 	QbittorrentTimeout       int    `toml:"qbittorrentTimeout" mapstructure:"qbittorrentTimeout"`
 	CheckForUpdates          bool   `toml:"checkForUpdates" mapstructure:"checkForUpdates"`
 	DisableSelfUpdate        bool   `toml:"disableSelfUpdate" mapstructure:"disableSelfUpdate"`
+	ProblemReports           bool   `toml:"problemReports" mapstructure:"problemReports"`
+	ProblemReportsURL        string `toml:"problemReportsURL" mapstructure:"problemReportsURL"`
 	PprofEnabled             bool   `toml:"pprofEnabled" mapstructure:"pprofEnabled"`
 	PprofAddr                string `toml:"pprofAddr" mapstructure:"pprofAddr"`
 	MetricsEnabled           bool   `toml:"metricsEnabled" mapstructure:"metricsEnabled"`
@@ -82,7 +85,6 @@ type Config struct {
 	IAcknowledgeThisIsABadIdea bool     `toml:"I_ACKNOWLEDGE_THIS_IS_A_BAD_IDEA" mapstructure:"I_ACKNOWLEDGE_THIS_IS_A_BAD_IDEA"`
 	AuthDisabledAllowedCIDRs   []string `toml:"authDisabledAllowedCIDRs" mapstructure:"authDisabledAllowedCIDRs"`
 
-	// OIDC Configuration
 	OIDCEnabled             bool   `toml:"oidcEnabled" mapstructure:"oidcEnabled"`
 	OIDCIssuer              string `toml:"oidcIssuer" mapstructure:"oidcIssuer"`
 	OIDCClientID            string `toml:"oidcClientId" mapstructure:"oidcClientId"`
@@ -110,7 +112,6 @@ func (c *Config) IsOIDCUserAllowed(subject, verifiedEmail string) bool {
 	}
 }
 
-// ValidateOIDCAllowedUser rejects a config that names the allowed OIDC user twice.
 func (c *Config) ValidateOIDCAllowedUser() error {
 	if c.OIDCAllowedSubject != "" && c.OIDCAllowedEmail != "" {
 		return errors.New("set only one of oidcAllowedSubject and oidcAllowedEmail")
@@ -118,8 +119,6 @@ func (c *Config) ValidateOIDCAllowedUser() error {
 	return nil
 }
 
-// SecureSessionCookie reports whether the session cookie needs the Secure
-// attribute: set explicitly, or implied by an HTTPS OIDC redirect URL.
 func (c *Config) SecureSessionCookie() bool {
 	return c.SessionCookieSecure || strings.HasPrefix(strings.ToLower(c.OIDCRedirectURL), "https://")
 }
@@ -139,9 +138,6 @@ func (c *Config) Publish() {
 	c.live.Store(&published)
 }
 
-// Live returns the last published config, which a reload does not change. Code
-// that runs while qui serves requests must read the config through Live. A
-// config that was never published returns itself.
 func (c *Config) Live() *Config {
 	if c.live == nil {
 		return c
@@ -149,16 +145,10 @@ func (c *Config) Live() *Config {
 	return c.live.Load()
 }
 
-// IsAuthDisabled returns true only when both AuthDisabled and
-// IAcknowledgeThisIsABadIdea are set, requiring the operator to explicitly
-// acknowledge the risks of running without authentication.
 func (c *Config) IsAuthDisabled() bool {
 	return c.AuthDisabled && c.IAcknowledgeThisIsABadIdea
 }
 
-// ParseAuthDisabledAllowedCIDRs parses configured auth-disabled IP ranges.
-// Entries can be either CIDR (for example 192.168.1.0/24) or a single IP
-// (for example 192.168.1.10, which is treated as /32 or /128).
 func (c *Config) ParseAuthDisabledAllowedCIDRs() ([]netip.Prefix, error) {
 	prefixes := make([]netip.Prefix, 0, len(c.AuthDisabledAllowedCIDRs))
 
@@ -190,7 +180,6 @@ func (c *Config) ParseAuthDisabledAllowedCIDRs() ([]netip.Prefix, error) {
 	return prefixes, nil
 }
 
-// ValidateAuthDisabledConfig validates required settings for auth-disabled mode.
 func (c *Config) ValidateAuthDisabledConfig() error {
 	if !c.IsAuthDisabled() {
 		return nil
@@ -210,9 +199,6 @@ func (c *Config) ValidateAuthDisabledConfig() error {
 	return nil
 }
 
-// NormalizeCORSAllowedOrigins validates and canonicalizes CORS allowlist entries.
-// Empty values are ignored, wildcard origins are rejected, and valid entries are
-// normalized to browser-style origins (scheme://host[:port]).
 func (c *Config) NormalizeCORSAllowedOrigins() error {
 	if len(c.CORSAllowedOrigins) == 0 {
 		c.CORSAllowedOrigins = nil

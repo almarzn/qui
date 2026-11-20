@@ -4,16 +4,14 @@
 package themes
 
 import (
-	"io/fs"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// TestRegistryIDsPinned pins the id of every committed free theme, and of the
-// licensed themes that users had before the community themes, when the build
-// fetched the licensed folder. These ids are stored in browsers and in the
+// TestRegistryIDsPinned pins the id of every built-in theme, free and licensed.
+// These ids are stored in browsers and in the
 // theme_settings table, so a change here breaks every user's saved selection.
 func TestRegistryIDsPinned(t *testing.T) {
 	want := map[string]struct{}{
@@ -25,6 +23,7 @@ func TestRegistryIDsPinned(t *testing.T) {
 		"swizzin":         {},
 		"kanagawa-dragon": {},
 		"kanagawa-wave":   {},
+		"meridian":        {},
 	}
 
 	for _, theme := range All() {
@@ -38,14 +37,15 @@ func TestRegistryIDsPinned(t *testing.T) {
 	require.Empty(t, want, "missing free themes")
 
 	t.Run("licensed", func(t *testing.T) {
-		if paths, _ := fs.Glob(assetsFS, "assets/premium/*.css"); len(paths) == 0 {
-			t.Skip("licensed folder is empty: run make themes-fetch to pin the licensed ids")
-		}
-		// A subset: a new licensed theme needs no entry here, but these ids must stay.
+		// A new licensed theme needs no entry here, but these ids must stay.
 		for _, id := range []string{
-			"amber-minimal", "amethyst-haze", "bubblegum", "catppuccin", "claude",
-			"cyberpunk", "kitsune", "the-matrix", "nord", "perpetuity", "spreadsheet",
-			"spreadsheet-classic", "synthwave", "tangerine", "tokyo-night",
+			"amber-minimal", "amethyst-haze", "bubblegum", "catppuccin", "catppuccin-latte",
+			"claude", "cs-office", "cyberpunk", "darcula", "dracula", "ethereal", "everforest", //nolint:misspell // Darcula is a theme name
+			"flexoki-light", "gruvbox", "hackerman", "jade-horse", "kanagawa", "kanagawa-lotus",
+			"kitsune", "last-horizon", "lumon", "lupine", "matte-black", "miasma", "monokai",
+			"nord", "one-dark", "osaka-jade", "perpetuity", "retro-82", "ristretto", "rose-pine",
+			"solitude", "spreadsheet", "spreadsheet-classic", "synthwave", "tangerine",
+			"the-matrix", "tokyo-night", "vantablack", "white",
 		} {
 			require.True(t, Exists(id), "missing licensed theme id %q", id)
 		}
@@ -85,7 +85,6 @@ func TestParseIDHeader(t *testing.T) {
 	require.Equal(t, "tokyo-night", parse("/* @name: Tokyo Night\n */\n", "tokyo_night", true).ID)
 	require.Equal(t, "nord", parse("/* @id: nord */\n", "x", true).ID)
 
-	// An empty @id line, or "@id:" inside another header value, keeps the name slug.
 	require.Equal(t, "nord", parse("/* @name: Nord\n * @id:\n * @description: Cold\n */\n", "x", true).ID)
 	require.Equal(t, "nord", parse("/* @name: Nord\n * @description: Use @id: other\n */\n", "x", true).ID)
 }
@@ -153,7 +152,6 @@ func TestExtractPreviewVars(t *testing.T) {
 	require.Equal(t, "blue", light["--secondary"])
 	require.NotContains(t, light, "--accent", "cyclic reference must drop the swatch")
 
-	// The dark block resolves through :root for variables it does not redefine.
 	dark := extractPreviewVars(css, ".dark")
 	require.Equal(t, "oklch(0.55 0.25 297)", dark["--primary"])
 	require.Equal(t, "navy", dark["--secondary"])

@@ -40,7 +40,7 @@ type instanceLister interface {
 }
 
 type torrentSource interface {
-	GetAllTorrents(ctx context.Context, instanceID int) ([]qbt.Torrent, error)
+	GetAllTorrentRefs(ctx context.Context, instanceID int) ([]*qbt.Torrent, error)
 	GetTorrentFilesBatch(ctx context.Context, instanceID int, hashes []string) (map[string]qbt.TorrentFiles, error)
 	BulkAction(ctx context.Context, instanceID int, hashes []string, action string) error
 	GetFreeSpace(ctx context.Context, instanceID int) (int64, error)

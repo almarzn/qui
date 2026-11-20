@@ -18,11 +18,11 @@ Indexers limit request frequency. If you see an error such as `indexer TorrentLe
 qui uses strict matching to ensure that cross-seeds have identical files. Both releases must match on:
 - Title, year, and release group
 - Resolution (1080p, 2160p)
-- Source (WEB-DL, BluRay) and collection (AMZN, NF)
+- Source (WEB-DL, BluRay) and collection (AMZN, NF). qui ignores a `UHD` before the source, so `UHD.WEB-DL` matches `WEB-DL`.
 - Codec (x264, x265) and HDR format. A bare `HDR` counts as `HDR10`.
 - Audio format and channels
 - Language, edition, cut, and version (v2, v3)
-- Variants like IMAX, HYBRID, REPACK, PROPER
+- Variants like IMAX, HYBRID, REPACK, PROPER, RERIP
 
 Search has one exception for a HYBRID tag on only one name. If HYBRID is the only difference and the reported sizes are within the size tolerance, search keeps the result. The file comparison after the download then decides. RSS uses this rule too, but only for feed items with the exact size of a local torrent. If the sizes are outside the tolerance, the rejection reason shows the size gap, for example `HYBRID (size differs by 7.20%)`.
 
@@ -90,7 +90,7 @@ Common reasons:
 - **Coverage is below your threshold**: qui did not find enough matching episodes
 - **Episodes are still downloading**: only fully completed episode torrents count toward coverage
 - **Release details do not match**: the episodes must match the pack's title, season, and normal release details such as source, resolution, and release group
-- **No eligible instance was scanned**: the instance requires local filesystem access plus hardlink or reflink mode
+- **No eligible instance was scanned**: an eligible instance has a link base directory, and either local filesystem access with hardlink or reflink mode, or [SSH access](../ssh-access.md) with hardlink mode
 - **Webhook source filters excluded your episodes**: include/exclude category or tag filters removed them from the scan
 - **The release is not a season pack** or **season-pack matching is disabled**
 
@@ -126,7 +126,7 @@ Two of these reasons show that the candidate belongs to different content. `titl
 
 For regular cross-seed search, look for `[CROSSSEED-SEARCH] Candidate rejected` entries. Each entry names the indexer, the rejected candidate, the two sizes, and the reason. The entry `[CROSSSEED-SEARCH] Release filtering rejection summary` reports the count for each reason. `TRACE` adds `[CROSSSEED-SEARCH] Candidate rejected by search classifier`, which shows the parsed fields of both releases.
 
-For the **autobrr webhook check**, look for `Webhook check: rejected near miss` entries. qui writes one entry for each rejected torrent that has the same release group as the announce. For a fansub release, such as `[SubsPlease] Show - 01`, the tag in brackets counts as the group. Each entry names the announced release (`incomingName`), the torrent in qBittorrent (`existingName`), and the reason (`rejectReason`). qui does not log the rejected torrents of other groups, because most torrents in a library have no relation to the announce.
+For the **autobrr webhook check**, look for `Webhook check: rejected near miss` entries. A near miss is a rejected torrent that has the same release group as the announce. For a fansub release, such as `[SubsPlease] Show - 01`, the tag in brackets counts as the group. Each entry names the announced release (`incomingName`), the torrent in qBittorrent (`existingName`), and the reason (`rejectReason`). At `DEBUG`, qui writes the first 5 near misses of each check. `TRACE` adds the others. The `Webhook check completed` entry gives the number of near misses in `nearMisses`. qui does not log the rejected torrents of other groups, because most torrents in a library have no relation to the announce.
 
 For content-prefilter decisions, `DEBUG` is enough. Look for messages such as:
 
@@ -190,7 +190,8 @@ If you enable **Skip recheck**, qui skips only decisions that require verificati
 
 Common causes:
 - **Filesystem mismatch**: the hardlink base directory resides on a different filesystem or volume than the download paths. Hardlinks cannot cross filesystems.
-- **Missing local filesystem access**: the target instance does not have "Local filesystem access" enabled in Instance Settings.
+- **Missing filesystem access**: the target instance has no "Local filesystem access" in Instance Settings and no [SSH access](../ssh-access.md). For a remote instance, do not turn on "Local filesystem access". Set up SSH access.
+- **No hardlinks on the SSH server**: the server of a remote instance cannot create hardlinks. The SSH tab of the instance shows "No hardlinks" in its list of limits.
 - **Permissions**: qui cannot read the instance content paths or write to the hardlink base directory.
 - **Invalid base directory**: the hardlink base directory path does not exist and qui failed to create it.
 
