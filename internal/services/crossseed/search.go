@@ -280,7 +280,7 @@ func (s *Service) searchSourceMatches(ctx context.Context, instance *models.Inst
 		limit:         opts.Limit,
 		cacheMode:     opts.CacheMode,
 	})
-	searchReq := gatherIn.req
+	searchReq := gatherIn.Req
 
 	// Apply category filtering to the search request with indexer-specific optimization
 	if len(searchReq.Categories) > 0 {
@@ -356,9 +356,8 @@ func (s *Service) searchSourceMatches(ctx context.Context, instance *models.Inst
 		RescueTitleMismatches:  opts.RescueTitleMismatches,
 	}
 	usable := s.searchUsablePredicate(searchBase)
-	gatherer := searchGatherer{search: s.searchOnce, idCapIndexers: s.jackettService.IndexerIDsWithIDSearchCaps, usable: usable}
 	torznabRequested = true
-	searchResp, coveredIndexerIDs, torznabAnswered, err := gatherer.gather(ctx, waitCtx, gatherIn)
+	searchResp, coveredIndexerIDs, torznabAnswered, err := s.newSearchGatherer(usable).Gather(ctx, waitCtx, gatherIn)
 	if err != nil {
 		return torznabFailed(err)
 	}
@@ -414,16 +413,7 @@ func (s *Service) searchSourceMatches(ctx context.Context, instance *models.Inst
 				if reason == "" {
 					reason = "release mismatch"
 				}
-				recordReleaseRejection(
-					releaseFilterReasons,
-					reason,
-					sourceTorrent.Name,
-					res.Title,
-					opts.FindIndividualEpisodes,
-					releaseFilterDebugInfoFrom(searchRelease),
-					releaseFilterDebugInfoFrom(candidateRelease),
-					"[CROSSSEED-SEARCH] Candidate rejected by search classifier",
-				)
+				releaseFilterReasons[reason]++
 				traceRejections.add(res, reason, releaseFilterReasons[reason])
 			}
 			if decision.StrictMismatchReason != "" && decision.SizeEvidence == searchSizeEvidenceExact {

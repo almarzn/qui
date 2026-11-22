@@ -60,6 +60,7 @@ const SYNCED_KEYS = new Set<string>([
   "qui-titlebar-speeds-enabled",
   "qui.language",
   "qui-sidebar-icon-only",
+  "qui-sidebar-hidden",
   FILTER_SIDEBAR_COLLAPSED_KEY,
   "qui-accordion",
   "qui-accordion-views-seeded",
@@ -79,6 +80,7 @@ const SYNCED_KEYS = new Set<string>([
   "qui-support-reminder-off",
   "qui-support-reminder-due",
   "qui-problem-reports-seen-at",
+  "qui-search-type",
 ])
 const SYNCED_PREFIXES = [
   "qui-cross-seed-blocklist-",
@@ -119,6 +121,7 @@ const SETTING_GROUPS: Record<Exclude<SettingGroup, "shared">, { keys: readonly s
       TORRENT_VIEW_MODE_KEYS.mobile,
       TORRENT_VIEW_MODE_KEYS.desktop,
       "qui-sidebar-icon-only",
+      "qui-sidebar-hidden",
       FILTER_SIDEBAR_COLLAPSED_KEY,
       "qui-accordion",
       "qui-accordion-views-seeded",

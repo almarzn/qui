@@ -31,7 +31,11 @@
     "rssEnabled": "輔種 RSS 已啟用",
     "scanRunning": "掃描執行中",
     "collapseToIcons": "收合為圖示",
-    "expandSidebar": "展開側邊欄"
+    "expandSidebar": "展開側邊欄",
+    "hideSidebar": "隱藏側邊欄",
+    "showSidebar": "顯示側邊欄",
+    "keepOpen": "固定側邊欄",
+    "menu": "選單"
   },
   "problemReports": {
     "reportProblem": "回報問題",
@@ -95,7 +99,28 @@
     },
     "privacy": {
       "anonymous": "匿名：無姓名，無帳號。brrbin 不保留 IP 位址。",
+      "signedIn": "維護者可以看到你的 {{provider}} 名稱（{{name}}），並可能會聯絡你。",
       "link": "隱私權政策"
+    },
+    "sender": {
+      "label": "傳送身分",
+      "anonymous": "匿名",
+      "providers": {
+        "github": "GitHub",
+        "discord": "Discord"
+      },
+      "signInWith": "使用 {{provider}} 登入",
+      "signOut": "登出",
+      "waiting": "正在等待 {{provider}}",
+      "errors": {
+        "discordNotMember": "你的 Discord 帳號不在 autobrr Discord 伺服器中。請加入該伺服器後重新登入，使用 GitHub 登入，或匿名傳送。",
+        "refused": "登入遭拒絕：{{reason}}",
+        "expired": "登入已過期。請重新登入。",
+        "popupBlocked": "你的瀏覽器封鎖了登入視窗。請允許 qui 開啟彈出式視窗，然後重新登入。",
+        "unavailable": "brrbin 現在無法為你登入。請稍後再試。",
+        "startFailed": "無法開始登入：{{message}}",
+        "signOutFailed": "無法登出：{{message}}"
+      }
     },
     "newerRelease": "目前執行 {{running}}。新版本 <release>{{newer}}</release> 已發布。",
     "send": "傳送",
@@ -137,7 +162,6 @@
     "currentInstance": "目前實例：{{name}}。點選切換實例。",
     "connected": "已連線",
     "disconnected": "已斷開",
-    "noActiveInstances": "沒有活動的實例",
     "showFilters": "顯示篩選器",
     "hideFilters": "隱藏篩選器",
     "addTorrent": "新增種子",
@@ -208,7 +232,6 @@
     "settings": "設定",
     "qbittorrentClients": "qBittorrent 用戶端",
     "instances": "實例",
-    "noActiveInstances": "沒有活動的實例",
     "loading": "載入中...",
     "noActiveClients": "沒有活動的用戶端",
     "updateAvailable": "有可用更新",
@@ -528,6 +551,7 @@
     "retry": "重試",
     "edit": "編輯",
     "moreActions": "更多操作",
-    "enabled": "已啟用"
+    "enabled": "已啟用",
+    "clearSelection": "清除選取"
   }
 }

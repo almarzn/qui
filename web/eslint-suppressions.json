@@ -206,7 +206,7 @@
   },
   "src/components/cross-seed/__tests__/RssRunItem.test.tsx": {
     "qui/no-comments": {
-      "count": 7
+      "count": 5
     }
   },
   "src/components/cross-seed/__tests__/RunFooter.test.tsx": {
@@ -731,12 +731,12 @@
   },
   "src/components/layout/Header.tsx": {
     "qui/no-comments": {
-      "count": 42
+      "count": 37
     }
   },
   "src/components/layout/MobileFooterNav.tsx": {
     "qui/no-comments": {
-      "count": 18
+      "count": 17
     }
   },
   "src/components/layout/Page.tsx": {
@@ -756,7 +756,7 @@
   },
   "src/components/layout/Sidebar.tsx": {
     "qui/no-comments": {
-      "count": 11
+      "count": 10
     }
   },
   "src/components/layout/SystemNoticeMenuItems.test.tsx": {
@@ -852,11 +852,6 @@
   "src/components/query-builder/fields.generated.ts": {
     "qui/no-comments": {
       "count": 3
-    }
-  },
-  "src/components/search/SearchResultCard.tsx": {
-    "qui/no-comments": {
-      "count": 5
     }
   },
   "src/components/settings/ApiKeysManager.test.tsx": {
@@ -986,7 +981,7 @@
   },
   "src/components/settings/TrackerCustomizationsManager.tsx": {
     "qui/no-comments": {
-      "count": 14
+      "count": 12
     }
   },
   "src/components/settings/notification-targets.ts": {
@@ -1026,7 +1021,7 @@
   },
   "src/components/shares/SharesTab.tsx": {
     "qui/no-comments": {
-      "count": 11
+      "count": 10
     }
   },
   "src/components/spreadsheet/SpreadsheetFormulaBar.tsx": {
@@ -1051,7 +1046,7 @@
   },
   "src/components/statistics/DeletedTorrents.tsx": {
     "qui/no-comments": {
-      "count": 25
+      "count": 24
     }
   },
   "src/components/statistics/EventsChart.tsx": {
@@ -1281,7 +1276,7 @@
   },
   "src/components/torrents/CrossSeedDialog.tsx": {
     "qui/no-comments": {
-      "count": 25
+      "count": 8
     }
   },
   "src/components/torrents/CrossSeedWarning.tsx": {
@@ -1347,11 +1342,6 @@
   "src/components/torrents/ManualCrossSeedDialog.tsx": {
     "qui/no-comments": {
       "count": 14
-    }
-  },
-  "src/components/torrents/SearchScopeEntries.tsx": {
-    "qui/no-comments": {
-      "count": 1
     }
   },
   "src/components/torrents/SelectAllHotkey.tsx": {
@@ -1661,7 +1651,7 @@
   },
   "src/components/transfers/TransferSelectionBar.tsx": {
     "qui/no-comments": {
-      "count": 8
+      "count": 3
     }
   },
   "src/components/transfers/TransferState.tsx": {
@@ -1676,7 +1666,7 @@
   },
   "src/components/transfers/TransfersTab.tsx": {
     "qui/no-comments": {
-      "count": 31
+      "count": 30
     }
   },
   "src/components/transfers/tabs.ts": {
@@ -1861,12 +1851,12 @@
   },
   "src/components/ui/truncated-text.test.tsx": {
     "qui/no-comments": {
-      "count": 2
+      "count": 1
     }
   },
   "src/components/ui/truncated-text.tsx": {
     "qui/no-comments": {
-      "count": 6
+      "count": 2
     }
   },
   "src/config/themes.test.ts": {
@@ -2081,12 +2071,12 @@
   },
   "src/hooks/useCrossSeedSearch.test.tsx": {
     "qui/no-comments": {
-      "count": 50
+      "count": 43
     }
   },
   "src/hooks/useCrossSeedSearch.tsx": {
     "qui/no-comments": {
-      "count": 11
+      "count": 10
     }
   },
   "src/hooks/useCrossSeedSettings.ts": {
@@ -2646,7 +2636,7 @@
   },
   "src/lib/__tests__/column-filter-utils.test.ts": {
     "qui/no-comments": {
-      "count": 72
+      "count": 65
     }
   },
   "src/lib/__tests__/cross-instance-torrents.test.ts": {
@@ -2981,7 +2971,7 @@
   },
   "src/lib/gazelle-lookup.ts": {
     "qui/no-comments": {
-      "count": 5
+      "count": 4
     }
   },
   "src/lib/incognito.ts": {
@@ -3362,16 +3352,6 @@
   "src/pages/Login.tsx": {
     "qui/no-comments": {
       "count": 2
-    }
-  },
-  "src/pages/Search.test.tsx": {
-    "qui/no-comments": {
-      "count": 2
-    }
-  },
-  "src/pages/Search.tsx": {
-    "qui/no-comments": {
-      "count": 4
     }
   },
   "src/pages/Settings.sections.test.tsx": {

@@ -27,6 +27,7 @@ import { NapsterLogo } from "@/components/ui/NapsterLogo"
 import { Separator } from "@/components/ui/separator"
 import { SwizzinLogo } from "@/components/ui/SwizzinLogo"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { SystemNoticeList } from "@/components/ui/SystemNoticeList"
 import { UpdateBanner } from "@/components/ui/UpdateBanner"
 import { useAuth } from "@/hooks/useAuth"
@@ -56,11 +57,13 @@ import {
   Ellipsis,
   LogOut,
   PanelLeftClose,
+  PanelLeftDashed,
   PanelLeftOpen,
+  Pin,
   Rss,
   SearchCode
 } from "lucide-react"
-import { useCallback, useMemo, type ReactElement, type ReactNode } from "react"
+import { useCallback, useMemo, type MouseEvent, type ReactElement, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 const rowClassName = "relative flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium short:py-1 short:text-[13px]/5"
@@ -83,16 +86,13 @@ function IconOnlyLabel({ show, label, children }: { show: boolean; label: ReactN
 const morphClassName = (shown: boolean) => cn("transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none", !shown && "scale-50 opacity-0")
 
 interface SidebarMarkProps {
-  /** The id of the instance, or ALL_INSTANCES_ID for Unified. */
   instanceId: number
-  /** The letters that a mark without letters of its own shows at the icon-only width. "" keeps the drive icon. */
   autoLetters: string
   iconOnly: boolean
   isActive: boolean
   problem?: boolean
 }
 
-/** The mark of a sidebar row. Letters show only at the icon-only width, and the full width shows the drive icon in their place. */
 function SidebarMark({ instanceId, autoLetters, iconOnly, isActive, problem }: SidebarMarkProps) {
   const [mark] = useInstanceMark(instanceId)
   const letters = findInstanceMarkIcon(mark.icon) ? "" : mark.letters || autoLetters
@@ -109,10 +109,33 @@ function SidebarMark({ instanceId, autoLetters, iconOnly, isActive, problem }: S
 
 interface SidebarProps {
   iconOnly: boolean
-  onToggleIconOnly: () => void
+  onToggleIconOnly?: () => void
+  onHide?: () => void
+  flyout?: boolean
+  onPin?: () => void
 }
 
-export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
+function SidebarHeaderButton({ label, tooltipSide, onClick, disabled, className, children }: { label: string; tooltipSide: "right" | "bottom"; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean; className?: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild onFocus={(event) => { if (!event.currentTarget.matches(":focus-visible")) event.preventDefault() }}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn("h-7 w-7 flex-shrink-0 bg-sidebar text-sidebar-foreground/50 hover:text-sidebar-foreground", className)}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side={tooltipSide} className="text-xs">{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+export function Sidebar({ iconOnly, onToggleIconOnly, onHide, flyout = false, onPin }: SidebarProps) {
   const { t, i18n } = useTranslation("common")
   const location = useLocation()
   const navigate = useNavigate()
@@ -213,30 +236,36 @@ export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
 
   return (
     <div {...themeArea("app-sidebar")} className="flex h-full w-full flex-col border-r bg-sidebar border-sidebar-border">
-      {/* The button stays at the right edge of the part that shows. At the icon-only width the brand has no room left, and the button is in the icon column. */}
       <div className={cn("flex flex-shrink-0 items-center pl-6 pr-[18px]", viewMode === "dense" ? "h-12" : "h-16")}>
         <h2 inert={iconOnly} className={cn("flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap text-lg font-semibold text-sidebar-foreground", labelClassName)}>
           {isDemo ? (
             <a href="/" target="_top" className="flex items-center gap-2 hover:opacity-80">{brand}</a>
           ) : brand}
         </h2>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="sticky right-[18px] -ml-1.5 h-7 w-7 flex-shrink-0 bg-sidebar text-sidebar-foreground/50 hover:text-sidebar-foreground"
-              onClick={onToggleIconOnly}
-              disabled={!settingsSettled}
-              aria-label={iconOnlyToggleLabel}
-            >
-              <IconOnlyToggleIcon className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side={iconOnly ? "right" : "bottom"} className="text-xs">
-            {iconOnlyToggleLabel}
-          </TooltipContent>
-        </Tooltip>
+        <div className="sticky right-[18px] -ml-1.5 flex flex-shrink-0 items-center gap-0.5">
+          {flyout ? (
+            <SidebarHeaderButton label={t("sidebar.keepOpen")} tooltipSide="bottom" onClick={onPin} disabled={!settingsSettled}>
+              <Pin className="h-4 w-4" />
+            </SidebarHeaderButton>
+          ) : (
+            <>
+              {!iconOnly && onHide && (
+                <SidebarHeaderButton
+                  label={t("sidebar.hideSidebar")}
+                  tooltipSide="bottom"
+                  onClick={onHide}
+                  disabled={!settingsSettled}
+                  className="transition-[opacity,visibility] delay-300 duration-150 starting:invisible starting:opacity-0 motion-reduce:transition-none motion-reduce:delay-0"
+                >
+                  <PanelLeftDashed className="h-4 w-4" />
+                </SidebarHeaderButton>
+              )}
+              <SidebarHeaderButton label={iconOnlyToggleLabel} tooltipSide={iconOnly ? "right" : "bottom"} onClick={(event) => { if (event.detail <= 1) onToggleIconOnly?.() }} disabled={!settingsSettled}>
+                <IconOnlyToggleIcon className="h-4 w-4" />
+              </SidebarHeaderButton>
+            </>
+          )}
+        </div>
       </div>
 
       <nav className={cn("flex flex-1 min-h-0 flex-col overflow-y-auto px-3", iconOnly && "[scrollbar-width:none]")}>
@@ -364,7 +393,7 @@ export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
                 >
                   <SidebarMark instanceId={instance.id} autoLetters={activeInstanceInitials[index]} iconOnly={iconOnly} isActive={isActive} problem={!instance.connected} />
                   <span className={rowLabelClassName("min-w-44")}>
-                    <span className="truncate max-w-36" title={instance.name}>{instance.name}</span>
+                    <TruncatedText className="max-w-36" openOnTap={false}>{instance.name}</TruncatedText>
                     <span className="ml-auto flex items-center gap-1.5">
                       {hasRss && (
                         <Tooltip>
@@ -418,7 +447,7 @@ export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
 
         <div className="mt-auto space-y-3 pt-2 empty:hidden">
           <SystemNoticeList iconOnly={iconOnly} />
-          <UpdateBanner iconOnly={iconOnly} />
+          <UpdateBanner iconOnly={iconOnly} installInSettings={flyout} />
         </div>
       </nav>
 
@@ -429,7 +458,7 @@ export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
         <div className={cn("relative flex items-center justify-between pl-3", iconOnly && "w-58")}>
           {/* A long dev version truncates, so the footer buttons stay inside the sidebar. */}
           <div className={cn("flex min-w-0 flex-col gap-1 text-[10px] text-sidebar-foreground/40 select-none whitespace-nowrap", swapClassName(!iconOnly))}>
-            <span className="truncate font-medium text-sidebar-foreground/50" title={appVersion}>{t("sidebar.version", { version: appVersion })}</span>
+            <TruncatedText className="font-medium text-sidebar-foreground/50">{t("sidebar.version", { version: appVersion })}</TruncatedText>
             <div className="flex items-center gap-1">
               <Copyright className="h-2.5 w-2.5" />
               <span>{new Date().getFullYear()} autobrr</span>
@@ -459,6 +488,12 @@ export function Sidebar({ iconOnly, onToggleIconOnly }: SidebarProps) {
                 {t("sidebar.version", { version: appVersion })}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {onHide && (
+                <DropdownMenuItem onClick={onHide} disabled={!settingsSettled}>
+                  <PanelLeftDashed className="h-4 w-4" />
+                  {t("sidebar.hideSidebar")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="gap-2">
                   <Globe className="h-4 w-4 text-muted-foreground" />

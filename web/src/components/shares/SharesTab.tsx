@@ -58,8 +58,7 @@ export function SharesTab() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-full pl-6 max-sm:pl-4">{t("transfers:columns.torrent")}</TableHead>
                 <TableHead className="hidden @lg:table-cell">{t("transfers:columns.state")}</TableHead>
-                {/* The header row takes no hover color, so its pinned cell takes none. */}
-                <TableHead pinEnd className="pr-6 max-sm:pr-4 [tr:hover>&]:bg-card"><span className="sr-only">{t("transfers:columns.actions")}</span></TableHead>
+                <TableHead className="pr-6 max-sm:pr-4"><span className="sr-only">{t("transfers:columns.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,8 +118,8 @@ function ShareRow({ share, instanceName }: { share: Share; instanceName: string 
   return (
     <TableRow data-share-id={share.id}>
       <TableCell className="w-full max-w-0 pl-6 align-top whitespace-normal max-sm:pl-4">
-        {/* The name wraps in full on touch, where no pointer shows its title. */}
-        <div id={nameId} className="font-medium pointer-fine:line-clamp-2"><TorrentName name={display.name(share)} /></div>
+        {/* The name wraps in full on touch, where no pointer opens its tooltip. */}
+        <div id={nameId} className="font-medium"><TorrentName name={display.name(share)} className="pointer-fine:line-clamp-2" /></div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
           <span>{instanceName}</span>
           <span aria-hidden="true">·</span>
@@ -160,7 +159,7 @@ function ShareRow({ share, instanceName }: { share: Share; instanceName: string 
         <StateLabel state={share.state} className="text-sm" />
         {progress}
       </TableCell>
-      <TableCell pinEnd className="pr-6 max-sm:pr-4">
+      <TableCell className="pr-6 max-sm:pr-4">
         <RowActions actions={actions} describedBy={nameId} />
       </TableCell>
     </TableRow>

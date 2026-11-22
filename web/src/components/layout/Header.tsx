@@ -5,7 +5,7 @@
 
 import { InstanceMarkIcon } from "@/components/instances/marks/InstanceMarkIcon"
 import { InstancePreferencesDialog } from "@/components/instances/preferences/InstancePreferencesDialog"
-import { UnifiedScopeDropdownSection } from "@/components/layout/UnifiedScopeDropdownSection"
+import { HeaderInstanceTitle } from "@/components/layout/HeaderInstanceTitle"
 import { SpreadsheetRibbonTabs } from "@/components/spreadsheet/SpreadsheetRibbonTabs"
 import { AddTorrentDialog } from "@/components/torrents/AddTorrentDialog"
 import { TorrentCreationTasks } from "@/components/torrents/TorrentCreationTasks"
@@ -29,9 +29,6 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Logo } from "@/components/ui/Logo"
-import { NapsterLogo } from "@/components/ui/NapsterLogo"
-import { SwizzinLogo } from "@/components/ui/SwizzinLogo"
 import { SupportButton } from "@/components/support/SupportButton"
 import { ThemeToggle } from "@/components/ui/ThemeToggle"
 import {
@@ -49,7 +46,6 @@ import { useIsMobile } from "@/hooks/useMediaQuery"
 import { usePersistedCompactViewState } from "@/hooks/usePersistedCompactViewState"
 import { usePersistedFilterSidebarState } from "@/hooks/usePersistedFilterSidebarState"
 import { usePersistedUnifiedInstanceFilter } from "@/hooks/usePersistedUnifiedInstanceFilter"
-import { useTheme } from "@/hooks/useTheme"
 import { api } from "@/lib/api"
 import {
   ALL_INSTANCES_ID,
@@ -62,15 +58,60 @@ import { hasSelection } from "@/lib/torrent-selection"
 import { cn } from "@/lib/utils"
 import type { InstanceCapabilities } from "@/types"
 import { useQueries, useQuery } from "@tanstack/react-query"
-import { Link, useNavigate, useSearch } from "@tanstack/react-router"
+import { useNavigate, useSearch } from "@tanstack/react-router"
 import { navigateWithSearch } from "@/lib/router-search"
-import { ChevronsUpDown, Cog, FileEdit, FunnelPlus, FunnelX, Info, ListTodo, Plus, Search, X } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Cog, FileEdit, FunnelPlus, FunnelX, Info, ListTodo, PanelLeftOpen, Plus, Search, X } from "lucide-react"
+import { useSystemNotices } from "@/hooks/useSystemNotices"
+import { useUpdateBannerDismissed } from "@/hooks/useUpdateBannerDismissed"
+import { systemNoticeDotColor, topSystemNoticeSeverity } from "@/lib/system-notice"
+import { type ReactNode, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
 import { useTranslation } from "react-i18next"
 
 interface HeaderProps {
   sidebarIconOnly?: boolean
+  sidebarHidden?: boolean
+  sidebarOpen?: boolean
+  openSidebarButtonRef?: Ref<HTMLButtonElement>
+  onOpenSidebar?: () => void
+}
+
+function OpenSidebarButton({ open, buttonRef, onClick }: { open: boolean; buttonRef?: Ref<HTMLButtonElement>; onClick?: () => void }) {
+  const { t } = useTranslation("common")
+  const systemNotices = useSystemNotices()
+  const { data: updateInfo } = useQuery({ queryKey: ["latest-version"], queryFn: () => api.getLatestVersion(), enabled: false })
+  const [updateDismissed] = useUpdateBannerDismissed()
+  const showUpdate = Boolean(updateInfo) && !updateDismissed
+  const extras = [
+    systemNotices.length > 0 && t("systemNotice.needsAttention"),
+    showUpdate && t("updateBanner.updateAvailable"),
+  ].filter(Boolean)
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild onFocus={(event) => { if (!event.currentTarget.matches(":focus-visible")) event.preventDefault() }}>
+        <Button
+          ref={buttonRef}
+          variant="ghost"
+          size="icon"
+          className="group relative hidden text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:inline-flex"
+          onClick={onClick}
+          aria-label={[t("sidebar.showSidebar"), ...extras].join(", ")}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+          {systemNotices.length > 0 && (
+            <span aria-hidden="true" className={cn("absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full ring-2 ring-background transition-colors group-hover:ring-muted", systemNoticeDotColor[topSystemNoticeSeverity(systemNotices)].fill)} />
+          )}
+          {showUpdate && <span aria-hidden="true" className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-green-500 ring-2 ring-background transition-colors group-hover:ring-muted" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {t("sidebar.showSidebar")}
+        {extras.map((extra) => <span key={String(extra)} className="block opacity-70">{extra}</span>)}
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 interface UnifiedActionDropdownProps {
@@ -119,9 +160,8 @@ function UnifiedActionDropdown({ icon, tooltip, label, instances, onSelectInstan
   )
 }
 
-export function Header({ sidebarIconOnly = false }: HeaderProps) {
-  // The icon-only sidebar has no room for the name of the instance or for the Unified scope, so the header shows them.
-  const showTitleOnDesktop = sidebarIconOnly
+export function Header({ sidebarIconOnly = false, sidebarHidden = false, sidebarOpen = false, openSidebarButtonRef, onOpenSidebar }: HeaderProps) {
+  const showTitleOnDesktop = sidebarIconOnly || sidebarHidden
   const { t } = useTranslation("common")
   const navigate = useNavigate()
   const routeSearch = useSearch({ strict: false }) as { q?: string; modal?: string;[key: string]: unknown }
@@ -259,7 +299,6 @@ export function Header({ sidebarIconOnly = false }: HeaderProps) {
     },
     [shouldShowInstanceControls]
   )
-  const { theme } = useTheme()
   const { viewMode } = usePersistedCompactViewState("desktop")
   const activeTaskCount = useActiveTaskCount(selectedInstanceId, canManageSelectedInstance && shouldShowInstanceControls)
 
@@ -304,92 +343,21 @@ export function Header({ sidebarIconOnly = false }: HeaderProps) {
   const headerElement = (
     <header {...themeArea("app-header")} className={cn("sticky top-0 z-50 hidden md:flex flex-wrap lg:flex-nowrap items-start lg:items-center justify-between sm:border-b bg-background pl-2 pr-4 md:pl-4 md:pr-4 lg:pl-2 lg:static py-2 lg:py-0", headerHeight, !isInstanceRoute && "sideways:hidden")}>
       <div className={cn("hidden md:flex items-center gap-2 mr-2 order-1 lg:order-none", innerHeight)}>
-        {instanceName && (hasMultipleActiveInstances || isAllInstancesRoute) ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "group flex items-center gap-2 text-xl font-semibold transition-all duration-300 hover:opacity-90 rounded-sm px-1 -mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  "lg:hidden", // Hidden on desktop by default
-                  showTitleOnDesktop && "lg:flex", // Visible on desktop when the sidebar shows only icons
-                  !shouldShowQuiOnMobile && "hidden sm:flex" // Hide on mobile when on instance routes
-                )}
-                aria-label={t("header.currentInstance", { name: instanceName })}
-                aria-haspopup="menu"
-              >
-                {theme === "swizzin" ? (
-                  <SwizzinLogo className="h-5 w-5" />
-                ) : theme === "napster" ? (
-                  <NapsterLogo className="h-5 w-5" />
-                ) : (
-                  <Logo className="h-5 w-5" />
-                )}
-                <span className="flex items-center max-w-32">
-                  <span className="truncate">{instanceName}</span>
-                  <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1 mt-0.5 opacity-60 flex-shrink-0" />
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64 mt-2" side="bottom" align="start">
-              <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("nav.instances")}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {hasMultipleActiveInstances && (
-                <>
-                  <UnifiedScopeDropdownSection
-                    activeInstances={activeInstances}
-                    effectiveUnifiedInstanceIds={effectiveUnifiedInstanceIds}
-                    isAllInstancesRoute={isAllInstancesRoute}
-                    onResetUnifiedScope={resetUnifiedScope}
-                    onToggleUnifiedScopeInstance={toggleUnifiedScopeInstance}
-                    scopeKeyPrefix="header-switch-scope"
-                  />
-                </>
-              )}
-              <div className="max-h-64 overflow-y-auto space-y-1">
-                {activeInstances.length > 0 ? (
-                  activeInstances.map((instance) => (
-                    <DropdownMenuItem key={instance.id} asChild>
-                      <Link
-                        to="/instances/$instanceId"
-                        params={{ instanceId: instance.id.toString() }}
-                        className={cn(
-                          "flex items-center gap-2 cursor-pointer rounded-sm px-2 py-1.5 text-sm focus-visible:outline-none",
-                          instance.id === selectedInstanceId ? "bg-accent text-accent-foreground font-medium" : "hover:bg-accent/80 data-[highlighted]:bg-accent/80 text-foreground"
-                        )}
-                      >
-                        <InstanceMarkIcon instanceId={instance.id} problem={!instance.connected} colored={instance.id !== selectedInstanceId} />
-                        <span className="flex-1 truncate">{instance.name}</span>
-                        {!instance.connected && <span className="sr-only">{t("header.disconnected")}</span>}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <p className="px-2 py-1.5 text-xs text-muted-foreground">{t("header.noActiveInstances")}</p>
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <h1 className={cn(
-            "flex items-center gap-2 pl-2 sm:pl-0 text-xl font-semibold transition-all duration-300",
+        {sidebarHidden && <OpenSidebarButton open={sidebarOpen} buttonRef={openSidebarButtonRef} onClick={onOpenSidebar} />}
+        <HeaderInstanceTitle
+          className={cn(
             "lg:hidden", // Hidden on desktop by default
-            showTitleOnDesktop && "lg:flex", // Visible on desktop when the sidebar shows only icons
+            showTitleOnDesktop && "lg:flex",
             !shouldShowQuiOnMobile && "hidden sm:flex" // Hide on mobile when on instance routes
-          )}>
-            {theme === "swizzin" ? (
-              <SwizzinLogo className="h-5 w-5" />
-            ) : theme === "napster" ? (
-              <NapsterLogo className="h-5 w-5" />
-            ) : (
-              <Logo className="h-5 w-5" />
-            )}
-            {instanceName ? (
-              <span className="truncate max-w-32">{instanceName}</span>
-            ) : "qui"}
-          </h1>
-        )}
+          )}
+          instanceName={instanceName}
+          activeInstances={activeInstances}
+          selectedInstanceId={selectedInstanceId}
+          isAllInstancesRoute={isAllInstancesRoute}
+          effectiveUnifiedInstanceIds={effectiveUnifiedInstanceIds}
+          onResetUnifiedScope={resetUnifiedScope}
+          onToggleUnifiedScopeInstance={toggleUnifiedScopeInstance}
+        />
       </div>
 
       {/* Filter button and action buttons - always on first row */}

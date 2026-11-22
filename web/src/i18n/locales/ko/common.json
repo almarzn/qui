@@ -31,7 +31,11 @@
     "rssEnabled": "Cross-seed RSS 활성화됨",
     "scanRunning": "스캔 실행 중",
     "collapseToIcons": "아이콘으로 접기",
-    "expandSidebar": "사이드바 펼치기"
+    "expandSidebar": "사이드바 펼치기",
+    "hideSidebar": "사이드바 숨기기",
+    "showSidebar": "사이드바 표시",
+    "keepOpen": "사이드바 고정",
+    "menu": "메뉴"
   },
   "problemReports": {
     "reportProblem": "문제 신고",
@@ -95,7 +99,28 @@
     },
     "privacy": {
       "anonymous": "익명: 이름도 계정도 없습니다. brrbin은 IP 주소를 보관하지 않습니다.",
+      "signedIn": "관리자가 {{provider}} 이름({{name}})을 확인하고 연락할 수 있습니다.",
       "link": "개인정보 처리방침"
+    },
+    "sender": {
+      "label": "다음으로 보내기",
+      "anonymous": "익명",
+      "providers": {
+        "github": "GitHub",
+        "discord": "Discord"
+      },
+      "signInWith": "{{provider}}로 로그인",
+      "signOut": "로그아웃",
+      "waiting": "{{provider}} 대기 중",
+      "errors": {
+        "discordNotMember": "Discord 계정이 autobrr Discord 서버에 없습니다. 서버에 가입한 뒤 다시 로그인하거나, GitHub로 로그인하거나 익명으로 보내세요.",
+        "refused": "로그인이 거부되었습니다: {{reason}}",
+        "expired": "로그인이 만료되었습니다. 다시 로그인하세요.",
+        "popupBlocked": "브라우저가 로그인 창을 차단했습니다. qui에서 팝업을 허용한 뒤 다시 로그인하세요.",
+        "unavailable": "brrbin이 지금은 로그인을 처리할 수 없습니다. 나중에 다시 시도하세요.",
+        "startFailed": "로그인을 시작하지 못했습니다: {{message}}",
+        "signOutFailed": "로그아웃하지 못했습니다: {{message}}"
+      }
     },
     "newerRelease": "현재 {{running}} 버전을 사용 중입니다. <release>{{newer}}</release> 버전이 나왔습니다.",
     "send": "보내기",
@@ -137,7 +162,6 @@
     "currentInstance": "현재 인스턴스: {{name}}. 클릭하여 인스턴스를 전환합니다.",
     "connected": "연결됨",
     "disconnected": "연결 끊김",
-    "noActiveInstances": "활성 인스턴스 없음",
     "showFilters": "필터 표시",
     "hideFilters": "필터 숨기기",
     "addTorrent": "토렌트 추가",
@@ -208,7 +232,6 @@
     "settings": "설정",
     "qbittorrentClients": "qBittorrent 클라이언트",
     "instances": "인스턴스",
-    "noActiveInstances": "활성 인스턴스 없음",
     "loading": "불러오는 중...",
     "noActiveClients": "활성 클라이언트 없음",
     "updateAvailable": "업데이트 사용 가능",
@@ -528,6 +551,7 @@
     "retry": "다시 시도",
     "edit": "편집",
     "moreActions": "추가 작업",
-    "enabled": "사용"
+    "enabled": "사용",
+    "clearSelection": "선택 해제"
   }
 }

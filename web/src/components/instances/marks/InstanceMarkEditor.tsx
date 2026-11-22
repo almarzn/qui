@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 import { Editor } from "@/components/kit/Editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   DEFAULT_INSTANCE_MARK,
   INSTANCE_MARK_COLORS,
@@ -38,16 +39,13 @@ const COLOR_LABEL_KEYS: Record<InstanceMarkColor, string> = {
 
 const SWATCHES: (InstanceMarkColor | null)[] = [null, ...INSTANCE_MARK_COLORS]
 
-// As in a group of radio buttons, an arrow key moves to the next or the previous color and picks it.
 const COLOR_STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
 
 const optionClassName = "outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
 const pressedClassName = "bg-accent ring-1 ring-foreground/40"
 const previewClassName = "grid size-8 place-items-center rounded-md border bg-background text-foreground"
-// A wide screen puts the label of a row of choices in a column on its left. A phone puts it above the row.
 const labelColumnClassName = "sm:grid sm:grid-cols-[6rem_1fr] sm:items-center sm:gap-2"
 
-/** Arrow keys, Home, and End move the focus between the buttons of a grid that carry data-index, so the grid is one Tab stop. */
 function moveFocus(event: KeyboardEvent<HTMLElement>, count: number, columns: number) {
   const from = Number((event.target as HTMLElement).dataset.index)
   if (Number.isNaN(from)) return
@@ -62,10 +60,6 @@ function moveFocus(event: KeyboardEvent<HTMLElement>, count: number, columns: nu
   event.currentTarget.querySelector<HTMLButtonElement>(`[data-index="${to}"]`)?.focus()
 }
 
-/**
- * The mark of an instance in words: the name of its icon, Letters and the letters, or Automatic and the initials, then its
- * color. For example "Cat · Teal" or "Letters · XZ".
- */
 export function InstanceMarkSummary({ instanceId, autoLetters }: { instanceId: number; autoLetters: string }) {
   const { t } = useTranslation("instances")
   const [mark] = useInstanceMark(instanceId)
@@ -79,7 +73,6 @@ export function InstanceMarkSummary({ instanceId, autoLetters }: { instanceId: n
 
 interface LettersFieldProps {
   id: string
-  /** The letters that the field shows: the letters of the mark, or "" while the mark has an icon. */
   value: string
   placeholder: string
   active: boolean
@@ -88,15 +81,10 @@ interface LettersFieldProps {
   onDone: () => void
 }
 
-/**
- * The letters of a mark. Each change saves at once, except while an input method composes a character: the field then
- * keeps the raw text, and saves when the character is done.
- */
 function LettersField({ id, value, placeholder, active, colorProps, onLetters, onDone }: LettersFieldProps) {
   const [composing, setComposing] = useState<string | null>(null)
   const commit = (raw: string) => {
     const letters = normalizeInstanceMarkLetters(raw)
-    // A space alone, or a third letter, leaves the letters as they are, so it cannot drop the icon of the mark.
     if (letters !== value) onLetters(letters)
   }
 
@@ -116,10 +104,8 @@ function LettersField({ id, value, placeholder, active, colorProps, onLetters, o
         else setComposing(event.target.value)
       }}
       onKeyDown={(event) => {
-        // Safari reports the Return that confirms input-method text with keyCode 229 and isComposing false.
         if (event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229) onDone()
       }}
-      // The field takes no third letter, so a new pair starts from selected text.
       onFocus={(event) => event.currentTarget.select()}
       className={cn(
         "h-9 w-14 text-center font-semibold uppercase placeholder:font-normal placeholder:text-muted-foreground/60 max-sm:h-11",
@@ -135,13 +121,11 @@ function LettersField({ id, value, placeholder, active, colorProps, onLetters, o
 interface InstanceMarkPickerBodyProps {
   mark: InstanceMark
   autoLetters: string
-  /** The Automatic button, which takes the focus after a reset. */
   automaticRef: RefObject<HTMLButtonElement | null>
   onChange: (mark: InstanceMark) => void
   onDone: () => void
 }
 
-/** The mark as the collapsed sidebar shows it, with letters, and as the other places show it, without. */
 function MarkPreview({ mark, autoLetters }: { mark: InstanceMark; autoLetters: string }) {
   const { t } = useTranslation("instances")
   const iconEntry = INSTANCE_MARK_ICONS.find((entry) => entry.name === mark.icon)
@@ -167,10 +151,6 @@ function MarkPreview({ mark, autoLetters }: { mark: InstanceMark; autoLetters: s
   )
 }
 
-/**
- * The choices of a mark: Automatic or letters, a color, and an icon. Each pick calls back at once. The color comes
- * before the icons, so a short screen shows it without a scroll.
- */
 function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onDone }: InstanceMarkPickerBodyProps) {
   const { t } = useTranslation("instances")
   const lettersInputId = useId()
@@ -179,7 +159,6 @@ function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onD
   const usesLetters = selectedIcon === -1 && mark.letters !== ""
   const automatic = selectedIcon === -1 && mark.letters === ""
   const colorProps = instanceMarkColorProps(mark.color)
-  // The Tab stop of the icon grid follows the focus, so Tab leaves the grid from the icon that an arrow key reached.
   const [iconTabStop, setIconTabStop] = useState<number | null>(null)
 
   return (
@@ -226,7 +205,6 @@ function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onD
             onChange({ ...mark, color: SWATCHES[to] })
             event.currentTarget.querySelector<HTMLButtonElement>(`[data-index="${to}"]`)?.focus()
           }}
-          // A phone fits the swatches in one row, so the icons start higher.
           className="grid grid-cols-9 gap-1 sm:flex sm:flex-wrap sm:items-center"
         >
           {SWATCHES.map((color, index) => {
@@ -234,35 +212,38 @@ function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onD
             const label = t(color ? COLOR_LABEL_KEYS[color] : "mark.colors.none")
             const swatch = instanceMarkColorProps(color)
             return (
-              <button
-                key={color ?? "none"}
-                type="button"
-                role="radio"
-                data-index={index}
-                tabIndex={checked ? 0 : -1}
-                aria-checked={checked}
-                aria-label={label}
-                title={label}
-                onClick={() => onChange({ ...mark, color })}
-                className={cn(
-                  "grid aspect-square w-full max-w-11 place-items-center justify-self-center rounded-full sm:size-8",
-                  optionClassName,
-                  swatch.className
-                )}
-                style={swatch.style}
-              >
-                <span
-                  className={cn(
-                    "relative size-5 overflow-hidden rounded-full ring-offset-2 ring-offset-background",
-                    color && "bg-current",
-                    checked ? "ring-2 ring-foreground" : "ring-1 ring-border"
-                  )}
-                >
-                  {color === null && (
-                    <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 -rotate-45 bg-muted-foreground" />
-                  )}
-                </span>
-              </button>
+              <Tooltip key={color ?? "none"}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    role="radio"
+                    data-index={index}
+                    tabIndex={checked ? 0 : -1}
+                    aria-checked={checked}
+                    aria-label={label}
+                    onClick={() => onChange({ ...mark, color })}
+                    className={cn(
+                      "grid aspect-square w-full max-w-11 place-items-center justify-self-center rounded-full sm:size-8",
+                      optionClassName,
+                      swatch.className
+                    )}
+                    style={swatch.style}
+                  >
+                    <span
+                      className={cn(
+                        "relative size-5 overflow-hidden rounded-full ring-offset-2 ring-offset-background",
+                        color && "bg-current",
+                        checked ? "ring-2 ring-foreground" : "ring-1 ring-border"
+                      )}
+                    >
+                      {color === null && (
+                        <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 -rotate-45 bg-muted-foreground" />
+                      )}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
             )
           })}
         </div>
@@ -291,24 +272,27 @@ function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onD
                   const pressed = index === selectedIcon
                   const label = t(entry.labelKey)
                   return (
-                    <button
-                      key={entry.name}
-                      type="button"
-                      data-index={index}
-                      data-current={pressed || undefined}
-                      tabIndex={index === (iconTabStop ?? Math.max(selectedIcon, 0)) ? 0 : -1}
-                      aria-label={label}
-                      aria-pressed={pressed}
-                      title={label}
-                      onFocus={() => setIconTabStop(index)}
-                      onClick={() => {
-                        setIconTabStop(index)
-                        onChange({ ...mark, icon: entry.name, letters: "" })
-                      }}
-                      className={cn("grid h-7 w-full place-items-center rounded-md max-sm:h-11", optionClassName, pressed && pressedClassName)}
-                    >
-                      <entry.Icon className={cn("size-[18px]", pressed && colorProps.className)} style={pressed ? colorProps.style : undefined} />
-                    </button>
+                    <Tooltip key={entry.name}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          data-index={index}
+                          data-current={pressed || undefined}
+                          tabIndex={index === (iconTabStop ?? Math.max(selectedIcon, 0)) ? 0 : -1}
+                          aria-label={label}
+                          aria-pressed={pressed}
+                          onFocus={() => setIconTabStop(index)}
+                          onClick={() => {
+                            setIconTabStop(index)
+                            onChange({ ...mark, icon: entry.name, letters: "" })
+                          }}
+                          className={cn("grid h-7 w-full place-items-center rounded-md max-sm:h-11", optionClassName, pressed && pressedClassName)}
+                        >
+                          <entry.Icon className={cn("size-[18px]", pressed && colorProps.className)} style={pressed ? colorProps.style : undefined} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{label}</TooltipContent>
+                    </Tooltip>
                   )
                 })}
               </div>
@@ -323,18 +307,11 @@ function InstanceMarkPickerBody({ mark, autoLetters, automaticRef, onChange, onD
 interface InstanceMarkEditorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** The id of the instance, or ALL_INSTANCES_ID for Unified. */
   instanceId: number
-  /** The instance name, or Unified. The editor names itself after it. */
   name: string
-  /** The initials that the collapsed sidebar shows while the mark has no letters. "" for Unified, which shows the drive icon. */
   autoLetters: string
 }
 
-/**
- * The picker of a mark: a dialog on a wide screen, a sheet from the bottom on a phone. Each pick saves at once, and the
- * focus starts on the current choice. Open it only once the client settings have settled, or a pick can be lost.
- */
 export function InstanceMarkEditor({ open, onOpenChange, instanceId, name, autoLetters }: InstanceMarkEditorProps) {
   const { t } = useTranslation("instances")
   const [mark, setMark] = useInstanceMark(instanceId)
@@ -355,7 +332,6 @@ export function InstanceMarkEditor({ open, onOpenChange, instanceId, name, autoL
           variant="outline"
           disabled={!customized}
           onClick={() => {
-            // The button turns disabled, so the focus moves to the choice that the reset made.
             setMark(DEFAULT_INSTANCE_MARK)
             automaticRef.current?.focus()
           }}

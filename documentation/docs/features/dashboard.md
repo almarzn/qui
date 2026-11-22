@@ -64,7 +64,7 @@ If you tap or click an offline instance, qui shows the cause and a link to the i
 
 ## Top trackers
 
-This part shows the five trackers with the most upload in the last 24 hours. Each row has the series color of the Statistics page, the name, the upload, and the share of the upload. The other trackers are one gray row **Other**. The rows add up to the upload of the last 24 hours. The [series colors](./statistics.md#series-colors) setting of the Statistics page applies to this list.
+This part shows the five trackers with the most upload in the last 24 hours. Each row has the series color of the Statistics page, the [tracker icon](./tracker-icons.md), the name, the upload, and the share of the upload. The other trackers are one gray row **Other**. Public, No tracker, and Other have no icon. The rows add up to the upload of the last 24 hours. The [series colors](./statistics.md#series-colors) setting of the Statistics page applies to this list.
 
 The **Statistics** link opens the Statistics page with the period **24 hours**. To rename or merge trackers, see [Tracker Customizations](./tracker-customizations.md).
 
@@ -83,7 +83,7 @@ This list shows each item that needs an action:
 
 If no item needs an action, the page does not show the list.
 
-A disk is almost full when the free space is less than 5% of the size of the disk. When qui cannot read the disk, qui uses 5% of the free space plus the [Unique size](#unique-size) of the instance as the limit. See [Storage and Library](#storage-and-library) for how qui reads the size of the disk. A System notice is not in this list. qui shows a System notice in the sidebar and the mobile footer.
+A disk is almost full when the free space is less than 5% of the size of the disk. qui shows this item only when it can read the disk through Local Filesystem Access or SSH access. When qui estimates the **Storage** bar, qui never marks the disk as almost full. See [Storage and Library](#storage-and-library) for how qui reads the size of the disk. A System notice is not in this list. qui shows a System notice in the sidebar and the mobile footer.
 
 ## Storage and Library
 
@@ -151,7 +151,7 @@ A Display profile is a named set of Display settings. Display settings are the p
 
 - The [table columns](./torrent-management.md#table-columns): which columns show, their order, their widths, and the stretch or scroll mode of the Name column
 - The row density of the torrent table, and the view of the mobile torrent list
-- The app sidebar, full or icon-only
+- The app sidebar: full, icon-only, or hidden
 - The filter sidebar, open or closed
 - The open sections of the filter sidebar
 - The collapsed category trees

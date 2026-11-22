@@ -32,7 +32,11 @@
     "rssEnabled": "RSS de cross-seed activat",
     "scanRunning": "Exploració en curs",
     "collapseToIcons": "Redueix a icones",
-    "expandSidebar": "Amplia la barra lateral"
+    "expandSidebar": "Amplia la barra lateral",
+    "hideSidebar": "Amaga la barra lateral",
+    "showSidebar": "Mostra la barra lateral",
+    "keepOpen": "Mantén la barra lateral oberta",
+    "menu": "Menú"
   },
   "problemReports": {
     "reportProblem": "Informa d'un problema",
@@ -102,7 +106,28 @@
     },
     "privacy": {
       "anonymous": "Anònim: sense nom ni compte. brrbin no guarda cap adreça IP.",
+      "signedIn": "Els mantenidors veuen el teu nom de {{provider}} ({{name}}) i et poden contactar.",
       "link": "Política de privadesa"
+    },
+    "sender": {
+      "label": "Envia com a",
+      "anonymous": "Anònim",
+      "providers": {
+        "github": "GitHub",
+        "discord": "Discord"
+      },
+      "signInWith": "Inicia la sessió amb {{provider}}",
+      "signOut": "Tanca la sessió",
+      "waiting": "S'està esperant {{provider}}",
+      "errors": {
+        "discordNotMember": "El teu compte de Discord no és al servidor de Discord d'autobrr. Uneix-te al servidor i torna a iniciar la sessió, inicia la sessió amb GitHub o envia de manera anònima.",
+        "refused": "Inici de sessió rebutjat: {{reason}}",
+        "expired": "L'inici de sessió ha caducat. Torna a iniciar la sessió.",
+        "popupBlocked": "El teu navegador ha bloquejat la finestra d'inici de sessió. Permet les finestres emergents per a qui i torna a iniciar la sessió.",
+        "unavailable": "brrbin no pot iniciar la sessió ara mateix. Torna-ho a provar més tard.",
+        "startFailed": "No s'ha pogut iniciar la sessió: {{message}}",
+        "signOutFailed": "No s'ha pogut tancar la sessió: {{message}}"
+      }
     },
     "newerRelease": "Fas servir {{running}}. Ja ha sortit <release>{{newer}}</release>.",
     "send": "Envia",
@@ -145,7 +170,6 @@
     "currentInstance": "Instància actual: {{name}}. Fes clic per canviar d'instància.",
     "connected": "Connectat",
     "disconnected": "Desconnectat",
-    "noActiveInstances": "No hi ha cap instància activa",
     "showFilters": "Mostra els filtres",
     "hideFilters": "Amaga els filtres",
     "addTorrent": "Afegeix un torrent",
@@ -217,7 +241,6 @@
     "settings": "Configuració",
     "qbittorrentClients": "Clients de qBittorrent",
     "instances": "Instàncies",
-    "noActiveInstances": "No hi ha cap instància activa",
     "loading": "S'està carregant...",
     "noActiveClients": "No hi ha cap client actiu",
     "updateAvailable": "Actualització disponible",
@@ -547,6 +570,7 @@
     "retry": "Torna-ho a provar",
     "edit": "Edita",
     "moreActions": "Més accions",
-    "enabled": "Activat"
+    "enabled": "Activat",
+    "clearSelection": "Esborra la selecció"
   }
 }

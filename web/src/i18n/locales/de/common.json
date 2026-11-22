@@ -32,7 +32,11 @@
     "rssEnabled": "Cross-Seed-RSS aktiviert",
     "scanRunning": "Scan läuft",
     "collapseToIcons": "Auf Symbole reduzieren",
-    "expandSidebar": "Sidebar ausklappen"
+    "expandSidebar": "Sidebar ausklappen",
+    "hideSidebar": "Sidebar ausblenden",
+    "showSidebar": "Sidebar anzeigen",
+    "keepOpen": "Sidebar geöffnet lassen",
+    "menu": "Menü"
   },
   "problemReports": {
     "reportProblem": "Problem melden",
@@ -102,7 +106,28 @@
     },
     "privacy": {
       "anonymous": "Anonym: kein Name, kein Konto. brrbin speichert keine IP-Adresse.",
+      "signedIn": "Die Maintainer sehen deinen {{provider}}-Namen ({{name}}) und können dich kontaktieren.",
       "link": "Datenschutz"
+    },
+    "sender": {
+      "label": "Senden als",
+      "anonymous": "Anonym",
+      "providers": {
+        "github": "GitHub",
+        "discord": "Discord"
+      },
+      "signInWith": "Mit {{provider}} anmelden",
+      "signOut": "Abmelden",
+      "waiting": "Warte auf {{provider}}",
+      "errors": {
+        "discordNotMember": "Dein Discord-Konto ist nicht auf dem autobrr-Discord-Server. Tritt dem Server bei und melde dich erneut an, melde dich mit GitHub an oder sende anonym.",
+        "refused": "Anmeldung abgelehnt: {{reason}}",
+        "expired": "Anmeldung abgelaufen. Melde dich erneut an.",
+        "popupBlocked": "Dein Browser hat das Anmeldefenster blockiert. Erlaube Pop-ups für qui und melde dich dann erneut an.",
+        "unavailable": "brrbin kann dich gerade nicht anmelden. Versuche es später erneut.",
+        "startFailed": "Die Anmeldung konnte nicht gestartet werden: {{message}}",
+        "signOutFailed": "Abmelden fehlgeschlagen: {{message}}"
+      }
     },
     "newerRelease": "Du nutzt {{running}}. <release>{{newer}}</release> ist verfügbar.",
     "send": "Senden",
@@ -145,7 +170,6 @@
     "currentInstance": "Aktuelle Instanz: {{name}}. Zum Wechseln der Instanz klicken.",
     "connected": "Verbunden",
     "disconnected": "Getrennt",
-    "noActiveInstances": "Keine aktiven Instanzen",
     "showFilters": "Filter anzeigen",
     "hideFilters": "Filter ausblenden",
     "addTorrent": "Torrent hinzufügen",
@@ -217,7 +241,6 @@
     "settings": "Einstellungen",
     "qbittorrentClients": "qBittorrent-Clients",
     "instances": "Instanzen",
-    "noActiveInstances": "Keine aktiven Instanzen",
     "loading": "Wird geladen...",
     "noActiveClients": "Keine aktiven Clients",
     "updateAvailable": "Update verfügbar",
@@ -547,6 +570,7 @@
     "retry": "Erneut versuchen",
     "edit": "Bearbeiten",
     "moreActions": "Weitere Aktionen",
-    "enabled": "Aktiviert"
+    "enabled": "Aktiviert",
+    "clearSelection": "Auswahl aufheben"
   }
 }

@@ -35,10 +35,13 @@ import {
   TabsTrigger
 } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { useInstanceCapabilities } from "@/hooks/useInstanceCapabilities.ts"
 import { useInstanceMetadata } from "@/hooks/useInstanceMetadata"
 import { usePathAutocomplete } from "@/hooks/usePathAutocomplete"
 import { useAddTorrentPreferences, useSubcategoriesEnabled } from "@/hooks/usePreferenceValues"
+import { addUrlsByIndexer } from "@/lib/add-torrent-urls"
 import { api } from "@/lib/api"
 import { canOfferManualCrossSeed } from "@/lib/manual-cross-seed"
 import { resolveDestinationPath } from "@/lib/save-path"
@@ -103,7 +106,7 @@ async function parseTorrentFile(file: File): Promise<string | null> {
 
 export type AddTorrentDropPayload =
   | { type: "file"; files: File[] }
-  | { type: "url"; urls: string[]; indexerId?: number }
+  | { type: "url"; urls: string[]; indexerByUrl?: Record<string, number> }
 
 interface AddTorrentDialogProps {
   instanceId: number
@@ -135,7 +138,7 @@ interface FormData {
   rename: string
   tempPathEnabled: boolean
   tempPath: string
-  indexerId?: number
+  indexerByUrl?: Record<string, number>
 }
 
 interface DuplicateEntryDetails {
@@ -527,10 +530,8 @@ export function AddTorrentDialog({ instanceId, open: controlledOpen, onOpenChang
       if (activeTab === "file" && data.torrentFiles && data.torrentFiles.length > 0) {
         submitData.torrentFiles = data.torrentFiles
       } else if (activeTab === "url" && data.urls) {
-        submitData.urls = data.urls.split("\n").map(u => u.trim()).filter(Boolean)
-        if (data.indexerId) {
-          submitData.indexerId = data.indexerId
-        }
+        const urls = data.urls.split("\n").map(u => u.trim()).filter(Boolean)
+        return addUrlsByIndexer(request => api.addTorrent(instanceId, request), submitData, urls, data.indexerByUrl)
       }
 
       return api.addTorrent(instanceId, submitData)
@@ -612,7 +613,7 @@ export function AddTorrentDialog({ instanceId, open: controlledOpen, onOpenChang
       limitRatio: 0,
       limitSeedTime: 0,
       rename: "",
-      indexerId: undefined as number | undefined,
+      indexerByUrl: undefined as Record<string, number> | undefined,
     },
     onSubmit: async ({ value }) => {
       await mutation.mutateAsync(value)
@@ -785,7 +786,7 @@ export function AddTorrentDialog({ instanceId, open: controlledOpen, onOpenChang
       setActiveTab("url")
       form.setFieldValue("urls", urls.join("\n"))
       form.setFieldValue("torrentFiles", null)
-      form.setFieldValue("indexerId", dropPayload.indexerId)
+      form.setFieldValue("indexerByUrl", dropPayload.indexerByUrl)
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
@@ -945,17 +946,21 @@ export function AddTorrentDialog({ instanceId, open: controlledOpen, onOpenChang
                                       <span className="block break-all">{file.name}</span>
                                       {duplicateInfo?.matches.length ? renderDuplicateMatches(duplicateInfo.matches) : null}
                                     </div>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleRemoveFile(index)}
-                                      className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
-                                      aria-label={t("addTorrentDialog.fileInput.removeFile")}
-                                      title={t("addTorrentDialog.fileInput.removeFile")}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleRemoveFile(index)}
+                                          className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
+                                          aria-label={t("addTorrentDialog.fileInput.removeFile")}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>{t("addTorrentDialog.fileInput.removeFile")}</TooltipContent>
+                                    </Tooltip>
                                   </li>
                                 )
                               })}
@@ -1107,9 +1112,9 @@ export function AddTorrentDialog({ instanceId, open: controlledOpen, onOpenChang
                           parentCategoryPaths,
                         })
                         return autoTMM && target ? (
-                          <p className="truncate text-xs text-muted-foreground" title={target}>
+                          <TruncatedText className="block text-xs text-muted-foreground">
                             {t("addTorrentDialog.options.categorySavePath", { path: target })}
-                          </p>
+                          </TruncatedText>
                         ) : null
                       }}
                     </form.Subscribe>
@@ -1573,7 +1578,6 @@ function PathSuggestions({ listRef, suggestions, highlightedIndex, onSelect }: {
             <button
               key={entry}
               type="button"
-              title={entry}
               className={cn(
                 "w-full px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
                 highlightedIndex === idx ? "bg-accent text-accent-foreground" : "hover:bg-accent/70"
@@ -1581,7 +1585,7 @@ function PathSuggestions({ listRef, suggestions, highlightedIndex, onSelect }: {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onSelect(entry)}
             >
-              <span className="block truncate text-left">{entry}</span>
+              <TruncatedText className="block text-left" openOnTap={false}>{entry}</TruncatedText>
             </button>
           ))}
         </div>

@@ -62,7 +62,7 @@ If qui recorded the period before in full, Uploaded and Downloaded also show the
 
 ## Chart
 
-The chart shows the upload or the download of each bar. Use the switch above the chart to select **Upload** or **Download**. The bars stack by tracker. The five trackers with the most bytes in the period each get a color. The other trackers are in the gray series Other.
+The chart shows the upload or the download of each bar. Use the switch above the chart to select **Upload** or **Download**. The bars stack by tracker. The five trackers with the most bytes in the period each get a color. The other trackers are in the gray series Other. Below the chart and in the numbers of a bar, the [tracker icon](./tracker-icons.md) shows next to the name of each tracker.
 
 To see the bytes of each tracker in a bar, hold the pointer on the bar. On a touch screen, tap the bar. To close the numbers on a touch screen, tap them, tap below the bars, tap outside the chart, or scroll the page.
 
@@ -96,7 +96,7 @@ To sort the table, click a column header. The sort applies to all rows. It also 
 
 ### By tracker
 
-The table has one row for each tracker, with these columns:
+The table has one row for each tracker. The [tracker icon](./tracker-icons.md) shows next to the name. Public and No tracker have no icon. The table has these columns:
 
 | Column | Content |
 |--------|---------|
@@ -157,16 +157,17 @@ The table below the table of trackers shows the ten torrents with the most uploa
 
 | Column | Content |
 |--------|---------|
-| Torrent | The name of the torrent. The mark "Deleted" shows that the torrent is not in qBittorrent now. The mark "Cross-seed" shows that the torrent completed with less than 1% of its size downloaded |
-| Tracker | The tracker that the torrent has now. If the page shows two or more instances, the name of the instance follows the tracker |
+| Torrent | The name of the torrent. A trash icon after the name shows that the torrent is not in qBittorrent now. A link icon shows a cross-seed: the torrent completed with less than 1% of its size downloaded. To see the name of an icon, hover over it. On a touch screen, tap it |
+| Tracker | The [tracker icon](./tracker-icons.md) and the tracker that the torrent has now. If the page shows two or more instances, the name of the instance follows the tracker |
 | Uploaded | The upload of the torrent in the period |
 | Downloaded | The download of the torrent in the period |
 | Ratio | Uploaded divided by Downloaded |
+| Seeded | Uploaded divided by the size of the files that you selected in qBittorrent. 1.00x is one full copy. A torrent with a size of 0 shows "–" |
 | First 24 hours | The upload of the torrent in the 24 hours after you added it. The cell is empty when qui first saw the torrent after those 24 hours |
 
-A deleted torrent stays in the list with its name. Thus, the list of a long period is complete. The table counts all the upload of a cross-seed, also the upload from before the torrent completed. For All time, the upload includes the Baseline of each torrent.
+A deleted torrent stays in the list with its name. Thus, the list of a long period is complete. The table counts all the upload of a cross-seed, also the upload from before the torrent completed. For All time, the upload includes the Baseline of each torrent. For the whole period, Seeded uses the last size that qui stored for the torrent. A deleted torrent keeps its last size.
 
-On a narrow screen, such as a phone, the table hides some columns. It shows the tracker, Downloaded, Ratio, and First 24 hours below the name. On a phone, the table shows 5 rows first. Tap **Show all** to see the 10 rows, and **Show fewer** to go back to 5 rows.
+On a narrow screen, such as a phone, the table hides some columns. It shows the tracker, Size, Downloaded, Ratio, and First 24 hours below the name. Seeded stays a column longer than Downloaded and Ratio. On a phone, Seeded shows below Uploaded, and the table shows 5 rows first. Tap **Show all** to see the 10 rows, and **Show fewer** to go back to 5 rows.
 
 Click or tap a row to see the upload and download of that torrent for each day of the period. The open row shows the whole name. qui stores the bytes of a torrent for each UTC day, so each bar is a UTC day.
 
@@ -200,7 +201,7 @@ The table **Deleted torrents** lists each torrent that was deleted in the period
 |--------|---------|
 | Deleted | The time of the delete |
 | Torrent | The name of the torrent |
-| Tracker | The tracker of the torrent |
+| Tracker | The [tracker icon](./tracker-icons.md) and the tracker of the torrent |
 | Deleted by | The cause of the delete |
 | Final upload | The upload of the torrent at the delete |
 | Final ratio | The last ratio that qBittorrent gave for the torrent |

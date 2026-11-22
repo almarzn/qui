@@ -11,12 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import "@/i18n"
 import { _resetClientSettingsForTests, applyServerSettings, readRaw, seedAndMarkReady, writeRaw } from "@/lib/client-settings"
 import { Statistics, StatisticsRoute } from "@/pages/Statistics"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { server } from "@/test/msw/server"
 import { stubPhone } from "@/test/stubPhone"
 import type { StatisticsBar } from "@/lib/statistics"
 import type { EventDay } from "@/lib/statistics-events"
 import type { LibraryPoint } from "@/lib/statistics-library"
-import type { LiveTrackerGroup, TransferHistoryInstance, TransferHistoryLibraryRow, TransferHistoryRow, TransferHistoryTorrent } from "@/types"
+import type { LiveTrackerGroup, TrackerCustomization, TransferHistoryInstance, TransferHistoryLibraryRow, TransferHistoryRow, TransferHistoryTorrent } from "@/types"
 
 const mocks = vi.hoisted(() => {
   const t = (key: string, options?: Record<string, unknown>) => {
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => {
   return {
     i18n: { t, i18n: { resolvedLanguage: "en", language: "en" } },
     incognitoMode: [false, () => {}] as [boolean, () => void],
+    trackerIcons: { data: undefined } as { data?: Record<string, string> },
     search: {} as { period?: string },
     navigate: vi.fn(),
   }
@@ -44,6 +46,7 @@ vi.mock("@/lib/incognito", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/incognito")>(),
   useIncognitoMode: () => mocks.incognitoMode,
 }))
+vi.mock("@/hooks/useTrackerIcons", () => ({ useTrackerIcons: () => mocks.trackerIcons }))
 vi.mock("@/components/statistics/TransferChart", () => ({
   TransferChart: ({ bars, groups, displayName }: { bars: StatisticsBar[]; groups: string[]; displayName: (group: string) => string }) => (
     <ul data-testid="chart" data-uploaded={bars.reduce((sum, bar) => sum + [...bar.bytes.values()].reduce((bytes, value) => bytes + value.uploaded, 0), 0)}>
@@ -86,6 +89,7 @@ let answer: (request: TransferRequest) => TransferHistoryRow[]
 let torrentAnswer: (request: TransferRequest) => TransferHistoryRow[]
 let requests: TransferRequest[]
 let liveGroups: (instanceId: number) => LiveTrackerGroup[]
+let customizations: TrackerCustomization[]
 let libraryAnswer: (instanceId: number) => TransferHistoryLibraryRow[]
 let hold: Promise<void> | undefined
 let holdBucket: string | undefined
@@ -98,7 +102,7 @@ function row(group: string, uploaded: number, downloaded: number, extra: Partial
 function torrentRow(hash: string, name: string, uploaded: number, torrent: Partial<TransferHistoryTorrent> = {}, extra: Partial<TransferHistoryRow> = {}): TransferHistoryRow {
   return row(hash, uploaded, 0, {
     width: "total",
-    torrent: { name, trackerGroup: "a.test", deleted: false, statisticsCrossSeed: false, uploadFirst24h: null, ...torrent },
+    torrent: { name, trackerGroup: "a.test", size: 1024, deleted: false, statisticsCrossSeed: false, uploadFirst24h: null, ...torrent },
     ...extra,
   })
 }
@@ -120,7 +124,9 @@ function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <Statistics />
+      <TooltipProvider>
+        <Statistics />
+      </TooltipProvider>
     </QueryClientProvider>
   )
   return { ...view, queryClient }
@@ -136,7 +142,7 @@ async function expectTile(label: string, expected: string) {
 
 function wideText(node: Element): string {
   const copy = node.cloneNode(true) as Element
-  copy.querySelectorAll("[data-narrow]").forEach(narrow => narrow.remove())
+  copy.querySelectorAll("[data-narrow], [aria-hidden=true]").forEach(narrow => narrow.remove())
   return copy.textContent ?? ""
 }
 
@@ -189,11 +195,14 @@ beforeEach(() => {
   answer = () => []
   torrentAnswer = () => []
   liveGroups = () => []
+  customizations = []
+  mocks.trackerIcons = { data: undefined }
   libraryAnswer = () => []
   server.use(
     http.get("*/api/instances/:id/transfer-history/library", ({ params }) => HttpResponse.json({ rows: libraryAnswer(Number(params.id)) })),
     http.get("*/api/instances/:id/transfer-history/deletes", () => HttpResponse.json({ deletes: [], counts: { automation: 0, user: 0, other: 0 } })),
     http.get("*/api/instances/:id/tracker-groups", ({ params }) => HttpResponse.json({ groups: liveGroups(Number(params.id)) })),
+    http.get("*/api/tracker-customizations", () => HttpResponse.json(customizations)),
     http.get("*/api/transfer-history/status", () => HttpResponse.json({ instances: statuses })),
     http.get("*/api/instances", () => HttpResponse.json(configuredIds.map(id => ({ id, name: `instance ${id}`, isActive: true })))),
     http.get("*/api/instances/:id/transfer-history", async ({ params, request }) => {
@@ -222,6 +231,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   // A test that opens a Select or uses Show fewer stubs it, as jsdom has no layout.
   delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
   localStorage.clear()
@@ -386,12 +396,12 @@ describe("Statistics", () => {
     renderPage()
     await screen.findByText("periods.custom")
     applyRange("2026-01-06")
-    await screen.findAllByTitle("First.Range-GRP")
+    await screen.findAllByText("First.Range-GRP")
 
     applyRange("2026-01-07")
-    await vi.waitFor(() => expect(screen.queryAllByTitle("First.Range-GRP")).toHaveLength(0))
+    await vi.waitFor(() => expect(screen.queryAllByText("First.Range-GRP")).toHaveLength(0))
     releaseSecond()
-    await screen.findAllByTitle("Second.Range-GRP")
+    await screen.findAllByText("Second.Range-GRP")
   })
 
   it("moves a preset period forward while the page stays open, and keeps the old numbers until the new ones load", async () => {
@@ -685,6 +695,25 @@ describe("Statistics", () => {
     expect(cells(table, "table.total").slice(0, 2)).toEqual(["table.total", "4 KiB"])
   })
 
+  it("shows the tracker icon of each Tracker group in the table, from a domain of the customizations that name the group", async () => {
+    mocks.trackerIcons = { data: { "a.test": "data:image/png;base64,YQ==", "b.test": "data:image/png;base64,Yg==" } }
+    customizations = [
+      { id: 1, displayName: "Bee ", domains: ["b.test"], createdAt: "", updatedAt: "" },
+      { id: 2, displayName: "Bee", domains: ["b-alt.test"], createdAt: "", updatedAt: "" },
+    ]
+    answer = ({ bucket }) => bucket === "day" ? ["a.test", "Bee", "c.test", "Public", "No tracker"].map(group => row(group, 1024, 0, { width: "day" })) : []
+    renderPage()
+
+    const table = await screen.findByRole("table")
+    const nameButton = (name: string) => within(table).getByText(name).closest("button")!
+    await vi.waitFor(() => expect(nameButton("Bee").querySelector("img")?.getAttribute("src")).toBe("data:image/png;base64,Yg=="))
+    expect(nameButton("a.test").querySelector("img")?.getAttribute("src")).toBe("data:image/png;base64,YQ==")
+    expect(nameButton("c.test").querySelector("img")).toBeNull()
+    expect(nameButton("c.test").querySelector("span[aria-hidden=true]")?.textContent).toBe("C")
+    expect(nameButton("groups.public").querySelector("img, span[aria-hidden=true]")).toBeNull()
+    expect(nameButton("groups.noTracker").querySelector("img, span[aria-hidden=true]")).toBeNull()
+  })
+
   // regression: #4099
   it("keeps the live numbers of the instances that loaded when one instance fails", async () => {
     answer = ({ bucket }) => bucket === "day" ? [row("a.test", 1024, 0, { width: "day" })] : []
@@ -918,10 +947,12 @@ describe("Statistics", () => {
       }
       return bucket === "day" ? [row("tracker.private.test", 1024, 0, { width: "day" })] : []
     }
+    mocks.trackerIcons = { data: { "tracker.private.test": "data:image/png;base64,cA==" } }
     renderPage()
     const table = await screen.findByRole("table")
     await vi.waitFor(() => expect(within(table).getAllByRole("row").length).toBeGreaterThan(2))
     expect(table.textContent).not.toContain("tracker.private.test")
+    expect(table.querySelector("img")).toBeNull()
 
     fireEvent.mouseDown(screen.getByText("table.groupings.category"), { button: 0 })
 
@@ -944,11 +975,26 @@ describe("Statistics", () => {
     const table = await screen.findByRole("table")
     await vi.waitFor(() => expect(within(table).queryByText("Bravo")).toBeTruthy())
     const names = within(table).getAllByRole("button").map(button => button.textContent)
-    expect(names).toEqual(["Alpha", "CharlietopTorrents.crossSeed", "BravotopTorrents.deleted"])
-    expect(cells(table, "Alpha").slice(1)).toEqual(["a.test · Seedbox", "3 KiB", "0 B", "∞", "1 KiB"])
-    expect(within(table).getAllByTitle("a.test · Seedbox").length).toBeGreaterThan(0)
+    expect(names).toEqual(["Alpha", "Charlie", "Bravo"])
+    const marks = (name: string) => within(table).getByText(name).closest("td")?.querySelector("[role=img]")?.getAttribute("aria-label")
+    expect([marks("Alpha"), marks("Charlie"), marks("Bravo")]).toEqual([undefined, "topTorrents.crossSeed", "topTorrents.deleted"])
+    expect(cells(table, "Alpha").slice(1)).toEqual(["a.test · Seedbox", "3 KiB", "0 B", "∞", "table.seededValue value=3.00", "1 KiB"])
+    expect(within(table).getAllByText("a.test · Seedbox").length).toBeGreaterThan(0)
     const asked = requests.filter(request => request.groupBy === "torrent")
     expect(asked.map(request => [request.instanceId, request.bucket, request.limit, request.group])).toEqual([[1, "total", "10", null], [2, "total", "10", null]])
+  })
+
+  it("shows the tracker icon next to the tracker of each top torrent, the first letter for a tracker with no icon, and none for Public", async () => {
+    mocks.trackerIcons = { data: { "a.test": "data:image/png;base64,YQ==" } }
+    torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1
+      ? [torrentRow("h1", "Alpha", 3072), torrentRow("h2", "Bravo", 2048, { trackerGroup: "c.test" }), torrentRow("h3", "Charlie", 1024, { trackerGroup: "Public" })]
+      : []
+    renderPage()
+
+    const table = await screen.findByRole("table")
+    await vi.waitFor(() => expect(within(table).queryByText("Charlie")).toBeTruthy())
+    const trackerCells = [...table.querySelectorAll("tbody tr td:nth-child(2)")]
+    expect(trackerCells.map(cell => cell.querySelector("img")?.getAttribute("src") ?? cell.querySelector("span[aria-hidden=true]")?.textContent ?? null)).toEqual(["data:image/png;base64,YQ==", "C", null])
   })
 
   it("shows the upload of an open torrent for each day, from the rows of that torrent on its instance", async () => {
@@ -978,8 +1024,128 @@ describe("Statistics", () => {
       return [...node.closest("td")?.querySelector("[data-narrow]")?.children ?? []].map(fact => fact.textContent)
     }
 
-    expect(await facts("Alpha")).toEqual(["table.columns.downloaded 1 KiB", "table.columns.ratio 3.00", "topTorrents.columns.first24h 1 KiB"])
-    expect(await facts("Bravo")).toEqual(["table.columns.downloaded 0 B", "table.columns.ratio ∞"])
+    expect(await facts("Alpha")).toEqual(["table.columns.size 1 KiB", "table.columns.downloaded 1 KiB", "table.columns.ratio 3.00", "topTorrents.columns.first24h 1 KiB"])
+    expect(await facts("Bravo")).toEqual(["table.columns.size 1 KiB", "table.columns.downloaded 0 B", "table.columns.ratio ∞"])
+  })
+
+  it("shows the upload of a top torrent over its size as Seeded, a value for a cross-seed and none for a size of 0", async () => {
+    torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1
+      ? [torrentRow("h1", "Alpha", 3072, {}, { downloaded: 1024 }), torrentRow("h2", "Bravo", 2048, { statisticsCrossSeed: true, size: 4096 }), torrentRow("h3", "Charlie", 1024, { size: 0 })]
+      : []
+    renderPage()
+    const table = await screen.findByRole("table")
+    await within(table).findByText("Charlie")
+    const header = [...table.querySelectorAll("thead th")].map(cell => cell.textContent)
+    const seeded = (name: string) => cells(table, name)[header.indexOf("table.columns.seeded")]
+    const belowUpload = (name: string) => within(table).getByText(name).closest("tr")?.querySelectorAll("td")[header.indexOf("table.columns.uploaded")].querySelector("[data-narrow]")?.textContent
+
+    expect(header).toEqual(["topTorrents.columns.torrent", "table.columns.tracker", "table.columns.uploaded", "table.columns.downloaded", "table.columns.ratio", "table.columns.seeded", "topTorrents.columns.first24h"])
+    expect([seeded("Alpha"), seeded("Bravo"), seeded("Charlie")]).toEqual(["table.seededValue value=3.00", "table.seededValue value=0.50", "–"])
+    expect(cells(table, "Bravo")[header.indexOf("table.columns.ratio")]).toBe("∞")
+    expect([belowUpload("Alpha"), belowUpload("Bravo"), belowUpload("Charlie")]).toEqual(["table.seededValue value=3.00", "table.seededValue value=0.50", "–"])
+    expect(screen.getByText("topTorrents.seededNote")).toBeTruthy()
+  })
+
+  it("opens the tooltip of a mark on a tap, without opening the row", async () => {
+    const touchWindow = window as Window & { ontouchstart?: unknown }
+    touchWindow.ontouchstart = null
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    try {
+      torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1 ? [torrentRow("h1", "Alpha", 1024, { deleted: true })] : []
+      renderPage()
+      const table = await screen.findByRole("table")
+      const icon = (await within(table).findByText("Alpha")).closest("td")!.querySelector("[role=img]")!
+
+      fireEvent.pointerDown(icon, { pointerType: "touch" })
+      fireEvent.pointerUp(icon, { pointerType: "touch" })
+      fireEvent(icon, new PointerEvent("click", { bubbles: true, cancelable: true, pointerType: "mouse" }))
+
+      expect(screen.getByRole("tooltip").textContent).toContain("topTorrents.deleted")
+      expect(within(table).getByText("Alpha").closest("button")?.getAttribute("aria-expanded")).toBe("false")
+    } finally {
+      vi.unstubAllGlobals()
+      delete touchWindow.ontouchstart
+    }
+  })
+
+  // regression: #4358
+  it("shows a cut-off tracker on a tap, and the tap still opens the row", async () => {
+    const touchWindow = window as Window & { ontouchstart?: unknown }
+    touchWindow.ontouchstart = null
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(200)
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(50)
+    try {
+      torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1 ? [torrentRow("h1", "Alpha", 1024)] : []
+      renderPage()
+      const table = await screen.findByRole("table")
+      const row = (await within(table).findByText("Alpha")).closest("tr")!
+      const tracker = row.querySelectorAll("td")[1].querySelector<HTMLElement>("[data-slot=truncated-text]")!
+
+      fireEvent.pointerDown(tracker, { pointerType: "touch" })
+      fireEvent.pointerUp(tracker, { pointerType: "touch" })
+      fireEvent.click(tracker)
+
+      expect(screen.getByRole("tooltip").textContent).toContain(tracker.textContent)
+      expect(within(table).getByText("Alpha").closest("button")?.getAttribute("aria-expanded")).toBe("true")
+    } finally {
+      vi.unstubAllGlobals()
+      delete touchWindow.ontouchstart
+    }
+  })
+
+  // regression: #4358
+  it("shows a cut-off tracker on a tap on a phone, where the tracker sits under the name, and the tap still opens the row", async () => {
+    const touchWindow = window as Window & { ontouchstart?: unknown }
+    touchWindow.ontouchstart = null
+    stubPhone("upright")
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(200)
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(50)
+    try {
+      torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1 ? [torrentRow("h1", "Alpha", 1024)] : []
+      renderPage()
+      const table = await screen.findByRole("table")
+      const row = (await within(table).findByText("Alpha")).closest("tr")!
+      const [nameCell, trackerCell] = row.querySelectorAll("td")
+      const trackerText = trackerCell.querySelector("[data-slot=truncated-text]")!.textContent
+      const tracker = [...nameCell.querySelectorAll<HTMLElement>("[data-slot=truncated-text]")].find(element => element.textContent === trackerText)
+
+      expect(tracker).toBeDefined()
+      fireEvent.pointerDown(tracker!, { pointerType: "touch" })
+      fireEvent.pointerUp(tracker!, { pointerType: "touch" })
+      fireEvent.click(tracker!)
+
+      expect(screen.getByRole("tooltip").textContent).toContain(trackerText)
+      expect(within(table).getByText("Alpha").closest("button")?.getAttribute("aria-expanded")).toBe("true")
+    } finally {
+      delete touchWindow.ontouchstart
+    }
+  })
+
+  it("opens the tooltip of a mark when the keyboard focuses it, outside the button of the row", async () => {
+    torrentAnswer = ({ instanceId, bucket }) => bucket === "total" && instanceId === 1 ? [torrentRow("h1", "Alpha", 1024, { statisticsCrossSeed: true })] : []
+    renderPage()
+    const table = await screen.findByRole("table")
+    const icon = (await within(table).findByText("Alpha")).closest("td")!.querySelector<HTMLElement>("[role=img]")!
+
+    act(() => icon.focus())
+
+    expect(document.activeElement).toBe(icon)
+    expect(icon.closest("button")).toBeNull()
+    await vi.waitFor(() => expect(screen.getByRole("tooltip").textContent).toContain("topTorrents.crossSeed"))
   })
 
   // regression: #4179

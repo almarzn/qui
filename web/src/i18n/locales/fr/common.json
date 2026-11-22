@@ -32,7 +32,11 @@
     "rssEnabled": "RSS cross-seed activé",
     "scanRunning": "Analyse en cours",
     "collapseToIcons": "Réduire aux icônes",
-    "expandSidebar": "Développer la barre latérale"
+    "expandSidebar": "Développer la barre latérale",
+    "hideSidebar": "Masquer la barre latérale",
+    "showSidebar": "Afficher la barre latérale",
+    "keepOpen": "Garder la barre latérale ouverte",
+    "menu": "Menu"
   },
   "problemReports": {
     "reportProblem": "Signaler un problème",
@@ -102,7 +106,28 @@
     },
     "privacy": {
       "anonymous": "Anonyme : aucun nom, aucun compte. brrbin ne conserve aucune adresse IP.",
+      "signedIn": "Les mainteneurs voient votre nom {{provider}} ({{name}}) et peuvent vous contacter.",
       "link": "Confidentialité"
+    },
+    "sender": {
+      "label": "Envoyer en tant que",
+      "anonymous": "Anonyme",
+      "providers": {
+        "github": "GitHub",
+        "discord": "Discord"
+      },
+      "signInWith": "Se connecter avec {{provider}}",
+      "signOut": "Se déconnecter",
+      "waiting": "En attente de {{provider}}",
+      "errors": {
+        "discordNotMember": "Votre compte Discord n'est pas sur le serveur Discord d'autobrr. Rejoignez le serveur et reconnectez-vous, connectez-vous avec GitHub ou envoyez anonymement.",
+        "refused": "Connexion refusée : {{reason}}",
+        "expired": "La connexion a expiré. Reconnectez-vous.",
+        "popupBlocked": "Votre navigateur a bloqué la fenêtre de connexion. Autorisez les fenêtres pop-up pour qui, puis reconnectez-vous.",
+        "unavailable": "brrbin ne peut pas vous connecter pour le moment. Réessayez plus tard.",
+        "startFailed": "Impossible de démarrer la connexion : {{message}}",
+        "signOutFailed": "Impossible de vous déconnecter : {{message}}"
+      }
     },
     "newerRelease": "Vous utilisez {{running}}. <release>{{newer}}</release> est disponible.",
     "send": "Envoyer",
@@ -145,7 +170,6 @@
     "currentInstance": "Instance actuelle : {{name}}. Cliquez pour changer d'instance.",
     "connected": "Connecté",
     "disconnected": "Déconnecté",
-    "noActiveInstances": "Aucune instance active",
     "showFilters": "Afficher les filtres",
     "hideFilters": "Masquer les filtres",
     "addTorrent": "Ajouter un torrent",
@@ -217,7 +241,6 @@
     "settings": "Paramètres",
     "qbittorrentClients": "Clients qBittorrent",
     "instances": "Instances",
-    "noActiveInstances": "Aucune instance active",
     "loading": "Chargement...",
     "noActiveClients": "Aucun client actif",
     "updateAvailable": "Mise à jour disponible",
@@ -547,6 +570,7 @@
     "retry": "Réessayer",
     "edit": "Modifier",
     "moreActions": "Plus d'actions",
-    "enabled": "Activé"
+    "enabled": "Activé",
+    "clearSelection": "Effacer la sélection"
   }
 }
