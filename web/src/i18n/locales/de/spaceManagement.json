@@ -153,7 +153,8 @@
     "doneTitle": "Löschen abgeschlossen",
     "doneDescription": "Alle Aktionen sind abgeschlossen.",
     "partialTitle": "Einige Aktionen sind fehlgeschlagen",
-    "partialDescription": "Die fehlgeschlagenen Aktionen sind unten markiert. Versuche es später erneut oder erledige sie in qBittorrent, Sonarr oder Radarr."
+    "partialDescription": "Die fehlgeschlagenen Aktionen sind unten markiert. Versuche es später erneut oder erledige sie in qBittorrent, Sonarr oder Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Geplant",

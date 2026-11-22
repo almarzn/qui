@@ -153,7 +153,8 @@
     "doneTitle": "삭제 완료",
     "doneDescription": "모든 작업이 끝났습니다.",
     "partialTitle": "일부 작업 실패",
-    "partialDescription": "실패한 작업은 아래에 표시됩니다. 나중에 다시 시도하거나 qBittorrent, Sonarr, Radarr에서 마무리하세요."
+    "partialDescription": "실패한 작업은 아래에 표시됩니다. 나중에 다시 시도하거나 qBittorrent, Sonarr, Radarr에서 마무리하세요.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "계획됨",

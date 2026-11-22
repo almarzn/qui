@@ -153,7 +153,8 @@
     "doneTitle": "Delete finished",
     "doneDescription": "Every action finished.",
     "partialTitle": "Some actions failed",
-    "partialDescription": "The failed actions are marked below. Try again later, or finish them in qBittorrent, Sonarr or Radarr."
+    "partialDescription": "The failed actions are marked below. Try again later, or finish them in qBittorrent, Sonarr or Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Planned",

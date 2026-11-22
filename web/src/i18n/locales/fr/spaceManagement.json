@@ -153,7 +153,8 @@
     "doneTitle": "Suppression terminée",
     "doneDescription": "Toutes les actions sont terminées.",
     "partialTitle": "Certaines actions ont échoué",
-    "partialDescription": "Les actions en échec sont signalées ci-dessous. Réessayez plus tard, ou terminez-les dans qBittorrent, Sonarr ou Radarr."
+    "partialDescription": "Les actions en échec sont signalées ci-dessous. Réessayez plus tard, ou terminez-les dans qBittorrent, Sonarr ou Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Prévu",

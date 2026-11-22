@@ -153,7 +153,8 @@
     "doneTitle": "刪除完成",
     "doneDescription": "所有動作均已完成。",
     "partialTitle": "部分動作失敗",
-    "partialDescription": "失敗的動作已在下方標出。請稍後再試，或在 qBittorrent、Sonarr 或 Radarr 中完成。"
+    "partialDescription": "失敗的動作已在下方標出。請稍後再試，或在 qBittorrent、Sonarr 或 Radarr 中完成。",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "已計畫",

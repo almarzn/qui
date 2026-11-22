@@ -82,6 +82,16 @@ export function SpaceManagementPage() {
     [allSections, section, deferredInputs, nowMs]
   )
   const selection = useMemo(() => visibleSelection(tabRoots, selected), [tabRoots, selected])
+  const seriesTitles = useMemo(
+    () => new Map(allNodes.flatMap(node => (node.children ?? []).map(child => [child.id, node.title] as const))),
+    [allNodes]
+  )
+  const openDelete = () => {
+    setDeleteNodes(selection.map(node => {
+      const series = seriesTitles.get(node.id)
+      return series ? { ...node, title: t("deleteDialog.seasonTitle", { series, season: node.title }) } : node
+    }))
+  }
   const selectionFrees = useMemo(() => selection.reduce((sum, node) => sum + node.reclaimableBytes, 0), [selection])
 
   const handleToggleSelect = useCallback((node: SpaceNode) => {
@@ -187,7 +197,7 @@ export function SpaceManagementPage() {
             <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => setSelected(new Set())}>
               {t("actions.clearSelection")}
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteNodes(selection)}>
+            <Button variant="destructive" size="sm" className="dark:bg-destructive" onClick={openDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t("actions.delete")}
             </Button>

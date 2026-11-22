@@ -153,7 +153,8 @@
     "doneTitle": "Eliminazione completata",
     "doneDescription": "Tutte le azioni sono terminate.",
     "partialTitle": "Alcune azioni non sono riuscite",
-    "partialDescription": "Le azioni non riuscite sono segnate qui sotto. Riprova più tardi, o completale in qBittorrent, Sonarr o Radarr."
+    "partialDescription": "Le azioni non riuscite sono segnate qui sotto. Riprova più tardi, o completale in qBittorrent, Sonarr o Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Previsto",

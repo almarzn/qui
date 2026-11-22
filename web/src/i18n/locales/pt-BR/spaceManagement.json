@@ -153,7 +153,8 @@
     "doneTitle": "Exclusão concluída",
     "doneDescription": "Todas as ações terminaram.",
     "partialTitle": "Algumas ações falharam",
-    "partialDescription": "As ações com falha estão marcadas abaixo. Tente de novo mais tarde, ou conclua no qBittorrent, Sonarr ou Radarr."
+    "partialDescription": "As ações com falha estão marcadas abaixo. Tente de novo mais tarde, ou conclua no qBittorrent, Sonarr ou Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Planejado",

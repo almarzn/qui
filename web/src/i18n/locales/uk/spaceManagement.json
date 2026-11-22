@@ -153,7 +153,8 @@
     "doneTitle": "Видалення завершено",
     "doneDescription": "Усі дії завершено.",
     "partialTitle": "Деякі дії не вдалися",
-    "partialDescription": "Невдалі дії позначено нижче. Спробуйте пізніше або завершіть їх у qBittorrent, Sonarr чи Radarr."
+    "partialDescription": "Невдалі дії позначено нижче. Спробуйте пізніше або завершіть їх у qBittorrent, Sonarr чи Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Заплановано",

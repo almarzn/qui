@@ -153,7 +153,8 @@
     "doneTitle": "Eliminació acabada",
     "doneDescription": "Totes les accions han acabat.",
     "partialTitle": "Algunes accions han fallat",
-    "partialDescription": "Les accions fallides es marquen a sota. Torna-ho a provar més tard, o acaba-les a qBittorrent, Sonarr o Radarr."
+    "partialDescription": "Les accions fallides es marquen a sota. Torna-ho a provar més tard, o acaba-les a qBittorrent, Sonarr o Radarr.",
+    "seasonTitle": "{{series}} · {{season}}"
   },
   "actionStatus": {
     "planned": "Previst",

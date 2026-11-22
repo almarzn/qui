@@ -22,7 +22,7 @@ import {
 import type { SpaceNode } from "../types"
 import { SeedingCell } from "./SeedingBadge"
 
-const GRID = "grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 md:grid-cols-[minmax(0,1fr)_minmax(0,200px)_84px_132px]"
+const GRID = "grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 md:grid-cols-[minmax(0,1fr)_minmax(0,300px)_84px_132px]"
 const ROW_HEIGHT = 48
 
 export interface SpaceListViewProps {
