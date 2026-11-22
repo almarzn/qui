@@ -6,7 +6,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatRelativeTime } from "@/lib/dateTimeUtils"
 import { formatBytes } from "@/lib/utils"
-import { GitBranch } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SEEDING_COLORS, SEEDING_STATE_KEYS } from "../lib/colors"
@@ -17,30 +16,39 @@ export function SeedingDot({ state }: { state: SeedingState }) {
   return <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: SEEDING_COLORS[state] }} />
 }
 
-/** A coloured dot with the ratio, or "not seeded"; the tooltip holds the transfer stats. */
-export function SeedingBadge({ node, state }: { node: SpaceNode; state: SeedingState }) {
+function SeedingNote({ node, state, nowMs }: { node: SpaceNode; state: SeedingState; nowMs: number }) {
   const { t } = useTranslation("spaceManagement")
   const { stats } = node
+  const crossSeeds = crossSeedCount(node)
+  const idleSeconds = stats.lastActivity ? Math.max(0, (nowMs - Date.parse(stats.lastActivity)) / 1000) : null
+  const main = state === "inactive" && idleSeconds !== null
+    ? t("list.idleFor", { time: formatDurationShort(idleSeconds) })
+    : t("seeding.ratio", { ratio: stats.ratio.toFixed(2) })
+  return (
+    <span className="min-w-0 truncate text-muted-foreground">
+      {main}
+      {crossSeeds > 0 && <span className="ml-2">{t("seeding.crossSeeds", { total: crossSeeds })}</span>}
+    </span>
+  )
+}
 
-  if (state === "notSeeded") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <SeedingDot state={state} />
-        {t("seeding.states.notSeeded")}
-      </span>
-    )
-  }
+export function SeedingCell({ node, state, nowMs }: { node: SpaceNode; state: SeedingState; nowMs: number }) {
+  const { t } = useTranslation("spaceManagement")
+  const { stats } = node
+  const label = (
+    <span className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[13px]">
+      <SeedingDot state={state} />
+      <span className="shrink-0">{t(SEEDING_STATE_KEYS[state])}</span>
+      {state !== "notSeeded" && <SeedingNote node={node} state={state} nowMs={nowMs} />}
+    </span>
+  )
+  if (state === "notSeeded") return label
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex cursor-default items-center gap-1.5 text-xs tabular-nums">
-          <SeedingDot state={state} />
-          {stats.ratio.toFixed(2)}
-        </span>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{label}</TooltipTrigger>
       <TooltipContent className="space-y-0.5 text-xs">
-        <div>{t(SEEDING_STATE_KEYS[state])}</div>
+        <div>{t("seeding.ratio", { ratio: stats.ratio.toFixed(2) })}</div>
         <div>{t("seeding.transfer", { up: formatBytes(stats.uploaded), down: formatBytes(stats.downloaded) })}</div>
         <div>{t("seeding.seedTime", { time: formatDurationShort(stats.seedingTimeSeconds) })}</div>
         <div>
@@ -48,24 +56,8 @@ export function SeedingBadge({ node, state }: { node: SpaceNode; state: SeedingS
             ? t("seeding.lastActivity", { time: formatRelativeTime(stats.lastActivity) })
             : t("seeding.noActivity")}
         </div>
+        {crossSeedCount(node) > 0 && <div>{t("seeding.crossSeeds", { total: crossSeedCount(node) })}</div>}
       </TooltipContent>
-    </Tooltip>
-  )
-}
-
-export function CrossSeedBadge({ node }: { node: SpaceNode }) {
-  const { t } = useTranslation("spaceManagement")
-  const count = crossSeedCount(node)
-  if (count === 0) return null
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex cursor-default items-center gap-0.5 text-xs text-muted-foreground tabular-nums">
-          <GitBranch className="h-3.5 w-3.5" />
-          {count}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{t("seeding.crossSeeds", { total: count })}</TooltipContent>
     </Tooltip>
   )
 }

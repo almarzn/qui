@@ -19,9 +19,10 @@
       "free": "可用"
     },
     "segmentTooltip": "{{label}}：{{size}}",
-    "summary": "已跟踪 {{tracked}} · 可用 {{free}} · 可释放 {{reclaimable}}",
     "ariaLabel": "磁盘使用：已用 {{used}}，共 {{total}}",
-    "loadError": "无法加载磁盘使用情况：{{error}}"
+    "loadError": "无法加载磁盘使用情况：{{error}}",
+    "headline": "{{size}} <muted>可释放</muted>",
+    "usage": "已用 <strong>{{used}}</strong>，共 {{total}} · 可用 <strong>{{free}}</strong>"
   },
   "filters": {
     "quickLabel": "快速筛选",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "标题",
-    "space": "空间（实色部分删除后释放）",
     "size": "大小",
     "seeding": "做种",
-    "barTooltip": "释放 {{reclaimable}}，共 {{size}}",
     "expand": "展开",
-    "collapse": "折叠"
+    "collapse": "折叠",
+    "frees": "删除后释放",
+    "keptBySeeding": "因做种保留",
+    "idleFor": "闲置 {{time}}"
   },
   "treemap": {
     "breadcrumb": "树图层级",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "媒体库",
     "orphans": "孤立项",
-    "summary": "条目：{{items}} · {{size}}"
+    "label": "项目分组"
   },
   "reclaimable": {
     "unknown": "未知",
@@ -110,9 +112,9 @@
     "crossSeed": "辅种"
   },
   "selection": {
-    "summary": "已选：{{items}} · {{size}}",
     "selectAll": "选择所有可见条目",
-    "selectRow": "选择 {{title}}"
+    "selectRow": "选择 {{title}}",
+    "frees": "已选：{{items}} · 释放 {{size}}"
   },
   "status": {
     "loadError": "无法加载空间树：{{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "请至少选择一个选项。",
     "planning": "正在规划…",
     "planError": "无法规划删除：{{error}}",
-    "reclaimable": "释放空间：{{size}}",
     "noActions": "使用这些选项没有可删除的内容。",
-    "plannedActions": "计划的操作",
     "results": "结果",
     "confirm": "删除",
     "deleting": "正在删除…",
     "cancel": "取消",
     "close": "关闭",
-    "executeError": "删除失败：{{error}}"
+    "executeError": "删除失败：{{error}}",
+    "frees": "释放 {{size}}",
+    "freed": "已释放 {{size}}",
+    "ofSelected": "已选 {{size}}",
+    "countTorrents": "种子：{{n}}",
+    "countCrossSeeds": "辅种：{{n}}",
+    "countFiles": "文件：{{n}}",
+    "bothHint": "硬链接的文件在两份副本都删除前会留在磁盘上。同时开启两个选项可再释放 {{size}}。",
+    "kindTorrent": "种子",
+    "kindFile": "文件",
+    "whatHappens": "将执行的操作",
+    "freesColumn": "释放",
+    "doneTitle": "删除完成",
+    "doneDescription": "所有操作均已完成。",
+    "partialTitle": "部分操作失败",
+    "partialDescription": "失败的操作已在下方标出。请稍后重试，或在 qBittorrent、Sonarr 或 Radarr 中完成。"
   },
   "actionStatus": {
     "planned": "已计划",

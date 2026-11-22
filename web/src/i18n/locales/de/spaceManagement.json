@@ -19,9 +19,10 @@
       "free": "Frei"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} erfasst · {{free}} frei · {{reclaimable}} freigebbar",
     "ariaLabel": "Speicherbelegung: {{used}} von {{total}} belegt",
-    "loadError": "Speicherbelegung konnte nicht geladen werden: {{error}}"
+    "loadError": "Speicherbelegung konnte nicht geladen werden: {{error}}",
+    "headline": "{{size}} <muted>können freigegeben werden</muted>",
+    "usage": "<strong>{{used}}</strong> belegt von {{total}} · <strong>{{free}}</strong> frei"
   },
   "filters": {
     "quickLabel": "Schnellfilter",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Titel",
-    "space": "Platz (der volle Teil wird beim Löschen frei)",
     "size": "Größe",
     "seeding": "Seeding",
-    "barTooltip": "Gibt {{reclaimable}} von {{size}} frei",
     "expand": "Aufklappen",
-    "collapse": "Zuklappen"
+    "collapse": "Zuklappen",
+    "frees": "Frei nach Löschen",
+    "keptBySeeding": "Durch Seeding gehalten",
+    "idleFor": "Inaktiv {{time}}"
   },
   "treemap": {
     "breadcrumb": "Treemap-Ebene",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Bibliothek",
     "orphans": "Verwaist",
-    "summary": "Einträge: {{items}} · {{size}}"
+    "label": "Elementgruppen"
   },
   "reclaimable": {
     "unknown": "Unbekannt",
@@ -110,9 +112,9 @@
     "crossSeed": "Cross-Seed"
   },
   "selection": {
-    "summary": "Ausgewählt: {{items}} · {{size}}",
     "selectAll": "Alle sichtbaren Einträge auswählen",
-    "selectRow": "{{title}} auswählen"
+    "selectRow": "{{title}} auswählen",
+    "frees": "Ausgewählt: {{items}} · gibt {{size}} frei"
   },
   "status": {
     "loadError": "Der Speicherbaum konnte nicht geladen werden: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Wähle mindestens eine Option.",
     "planning": "Wird geplant…",
     "planError": "Das Löschen konnte nicht geplant werden: {{error}}",
-    "reclaimable": "Freigegebener Platz: {{size}}",
     "noActions": "Mit diesen Optionen gibt es nichts zu löschen.",
-    "plannedActions": "Geplante Aktionen",
     "results": "Ergebnisse",
     "confirm": "Löschen",
     "deleting": "Wird gelöscht…",
     "cancel": "Abbrechen",
     "close": "Schließen",
-    "executeError": "Löschen fehlgeschlagen: {{error}}"
+    "executeError": "Löschen fehlgeschlagen: {{error}}",
+    "frees": "Gibt {{size}} frei",
+    "freed": "{{size}} freigegeben",
+    "ofSelected": "von {{size}} ausgewählt",
+    "countTorrents": "Torrents: {{n}}",
+    "countCrossSeeds": "Cross-Seeds: {{n}}",
+    "countFiles": "Dateien: {{n}}",
+    "bothHint": "Hardlink-Dateien bleiben auf der Festplatte, bis beide Kopien weg sind. Schalte beide Optionen ein, um {{size}} mehr freizugeben.",
+    "kindTorrent": "Torrent",
+    "kindFile": "Datei",
+    "whatHappens": "Was passiert",
+    "freesColumn": "Gibt frei",
+    "doneTitle": "Löschen abgeschlossen",
+    "doneDescription": "Alle Aktionen sind abgeschlossen.",
+    "partialTitle": "Einige Aktionen sind fehlgeschlagen",
+    "partialDescription": "Die fehlgeschlagenen Aktionen sind unten markiert. Versuche es später erneut oder erledige sie in qBittorrent, Sonarr oder Radarr."
   },
   "actionStatus": {
     "planned": "Geplant",

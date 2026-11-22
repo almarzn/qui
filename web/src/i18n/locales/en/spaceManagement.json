@@ -19,9 +19,10 @@
       "free": "Free"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} tracked · {{free}} free · {{reclaimable}} reclaimable",
     "ariaLabel": "Disk usage: {{used}} of {{total}} used",
-    "loadError": "Could not load disk usage: {{error}}"
+    "loadError": "Could not load disk usage: {{error}}",
+    "headline": "{{size}} <muted>can be freed</muted>",
+    "usage": "<strong>{{used}}</strong> used of {{total}} · <strong>{{free}}</strong> free"
   },
   "filters": {
     "quickLabel": "Quick filters",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Title",
-    "space": "Space (solid part is freed by a delete)",
     "size": "Size",
     "seeding": "Seeding",
-    "barTooltip": "Frees {{reclaimable}} of {{size}}",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "frees": "Frees on delete",
+    "keptBySeeding": "Kept by seeding",
+    "idleFor": "Idle {{time}}"
   },
   "treemap": {
     "breadcrumb": "Treemap level",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Library",
     "orphans": "Orphans",
-    "summary": "Items: {{items}} · {{size}}"
+    "label": "Item groups"
   },
   "reclaimable": {
     "unknown": "Unknown",
@@ -110,9 +112,9 @@
     "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Selected: {{items}} · {{size}}",
     "selectAll": "Select all visible items",
-    "selectRow": "Select {{title}}"
+    "selectRow": "Select {{title}}",
+    "frees": "Selected: {{items}} · frees {{size}}"
   },
   "status": {
     "loadError": "Could not load the space tree: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Choose at least one option.",
     "planning": "Planning…",
     "planError": "Could not plan the delete: {{error}}",
-    "reclaimable": "Space freed: {{size}}",
     "noActions": "Nothing to delete with these options.",
-    "plannedActions": "Planned actions",
     "results": "Results",
     "confirm": "Delete",
     "deleting": "Deleting…",
     "cancel": "Cancel",
     "close": "Close",
-    "executeError": "Delete failed: {{error}}"
+    "executeError": "Delete failed: {{error}}",
+    "frees": "Frees {{size}}",
+    "freed": "Freed {{size}}",
+    "ofSelected": "of {{size}} selected",
+    "countTorrents": "Torrents: {{n}}",
+    "countCrossSeeds": "Cross-seeds: {{n}}",
+    "countFiles": "Files: {{n}}",
+    "bothHint": "Hardlinked files stay on disk until both copies are gone. Turn on both options to free {{size}} more.",
+    "kindTorrent": "Torrent",
+    "kindFile": "File",
+    "whatHappens": "What happens",
+    "freesColumn": "Frees",
+    "doneTitle": "Delete finished",
+    "doneDescription": "Every action finished.",
+    "partialTitle": "Some actions failed",
+    "partialDescription": "The failed actions are marked below. Try again later, or finish them in qBittorrent, Sonarr or Radarr."
   },
   "actionStatus": {
     "planned": "Planned",

@@ -159,60 +159,31 @@ export function partitionNodes(nodes: SpaceNode[]): Record<SpaceSection, SpaceNo
   return { library, orphans }
 }
 
-export type SpaceRow =
-  | { type: "section"; id: string; section: SpaceSection; count: number; sizeBytes: number; collapsed: boolean }
-  | { type: "node"; id: string; node: SpaceNode; depth: number; hasChildren: boolean; expanded: boolean }
+export interface SpaceRow {
+  id: string
+  node: SpaceNode
+  depth: number
+  hasChildren: boolean
+  expanded: boolean
+}
 
-/** Flattens the visible tree into rows for the virtualizer. An expanded series shows its seasons. */
-export function flattenTree(
-  sections: Record<SpaceSection, SpaceNode[]>,
-  expanded: ReadonlySet<string>,
-  collapsedSections: ReadonlySet<SpaceSection>
-): SpaceRow[] {
+export function flattenNodes(nodes: SpaceNode[], expanded: ReadonlySet<string>): SpaceRow[] {
   const rows: SpaceRow[] = []
-
   const pushNode = (node: SpaceNode, depth: number) => {
     const hasChildren = (node.children?.length ?? 0) > 0
     const isExpanded = hasChildren && expanded.has(node.id)
-    rows.push({ type: "node", id: node.id, node, depth, hasChildren, expanded: isExpanded })
+    rows.push({ id: node.id, node, depth, hasChildren, expanded: isExpanded })
     if (isExpanded) {
       for (const child of node.children ?? []) pushNode(child, depth + 1)
     }
   }
-
-  for (const section of ["library", "orphans"] as const) {
-    const nodes = sections[section]
-    if (nodes.length === 0) continue
-    const collapsed = collapsedSections.has(section)
-    rows.push({
-      type: "section",
-      id: `section:${section}`,
-      section,
-      count: nodes.length,
-      sizeBytes: nodes.reduce((sum, node) => sum + node.sizeBytes, 0),
-      collapsed,
-    })
-    if (!collapsed) {
-      for (const node of nodes) pushNode(node, 0)
-    }
-  }
-
+  for (const node of nodes) pushNode(node, 0)
   return rows
 }
 
-export interface SizeBar {
-  /** Width of the whole bar, in percent of the largest item. */
-  totalPct: number
-  /** Width of the reclaimable part, in percent of the largest item. */
-  reclaimablePct: number
-}
-
-/** Bar widths for a node next to the largest visible item. */
-export function sizeBar(node: SpaceNode, maxBytes: number): SizeBar {
-  if (maxBytes <= 0 || node.sizeBytes <= 0) return { totalPct: 0, reclaimablePct: 0 }
-  const totalPct = Math.min(100, (node.sizeBytes / maxBytes) * 100)
-  const reclaimable = Math.min(node.reclaimableBytes, node.sizeBytes)
-  return { totalPct, reclaimablePct: (Math.max(0, reclaimable) / maxBytes) * 100 }
+export function reclaimablePct(node: SpaceNode, maxReclaimableBytes: number): number {
+  if (maxReclaimableBytes <= 0 || node.reclaimableBytes <= 0) return 0
+  return Math.min(100, (node.reclaimableBytes / maxReclaimableBytes) * 100)
 }
 
 // Selection holds leaf ids only (seasons, movies, orphans, and a series without seasons).
@@ -364,4 +335,12 @@ export function activeQuickFilter(inputs: SpaceFilterInputs): QuickFilter | null
       preset.inactiveForDays.trim() === inputs.inactiveForDays.trim() &&
       preset.notSeeded === inputs.notSeeded
   }) ?? null
+}
+
+export function quickFilterCounts(nodes: SpaceNode[], inputs: SpaceFilterInputs, nowMs: number): Record<QuickFilter, number> {
+  const counts = {} as Record<QuickFilter, number>
+  for (const quick of QUICK_FILTERS) {
+    counts[quick] = filterTree(nodes, parseFilterInputs(applyQuickFilter(inputs, quick)), nowMs).length
+  }
+  return counts
 }

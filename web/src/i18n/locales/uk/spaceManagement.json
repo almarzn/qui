@@ -19,9 +19,10 @@
       "free": "Вільно"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} відстежується · {{free}} вільно · {{reclaimable}} можна звільнити",
     "ariaLabel": "Використання диска: зайнято {{used}} з {{total}}",
-    "loadError": "Не вдалося завантажити використання диска: {{error}}"
+    "loadError": "Не вдалося завантажити використання диска: {{error}}",
+    "headline": "{{size}} <muted>можна звільнити</muted>",
+    "usage": "<strong>{{used}}</strong> зайнято з {{total}} · <strong>{{free}}</strong> вільно"
   },
   "filters": {
     "quickLabel": "Швидкі фільтри",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Назва",
-    "space": "Місце (суцільна частина звільняється видаленням)",
     "size": "Розмір",
     "seeding": "Роздача",
-    "barTooltip": "Звільняє {{reclaimable}} з {{size}}",
     "expand": "Розгорнути",
-    "collapse": "Згорнути"
+    "collapse": "Згорнути",
+    "frees": "Звільнить видалення",
+    "keptBySeeding": "Тримає роздача",
+    "idleFor": "Неактивний {{time}}"
   },
   "treemap": {
     "breadcrumb": "Рівень карти",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Бібліотека",
     "orphans": "Осиротілі",
-    "summary": "Елементи: {{items}} · {{size}}"
+    "label": "Групи елементів"
   },
   "reclaimable": {
     "unknown": "Невідомо",
@@ -110,9 +112,9 @@
     "crossSeed": "Крос-сід"
   },
   "selection": {
-    "summary": "Вибрано: {{items}} · {{size}}",
     "selectAll": "Вибрати всі видимі елементи",
-    "selectRow": "Вибрати {{title}}"
+    "selectRow": "Вибрати {{title}}",
+    "frees": "Вибрано: {{items}} · звільнить {{size}}"
   },
   "status": {
     "loadError": "Не вдалося завантажити дерево місця: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Виберіть принаймні один варіант.",
     "planning": "Планування…",
     "planError": "Не вдалося спланувати видалення: {{error}}",
-    "reclaimable": "Звільнено місця: {{size}}",
     "noActions": "З цими параметрами нічого видаляти.",
-    "plannedActions": "Заплановані дії",
     "results": "Результати",
     "confirm": "Видалити",
     "deleting": "Видалення…",
     "cancel": "Скасувати",
     "close": "Закрити",
-    "executeError": "Не вдалося видалити: {{error}}"
+    "executeError": "Не вдалося видалити: {{error}}",
+    "frees": "Звільнить {{size}}",
+    "freed": "Звільнено {{size}}",
+    "ofSelected": "з вибраних {{size}}",
+    "countTorrents": "Торренти: {{n}}",
+    "countCrossSeeds": "Крос-сіди: {{n}}",
+    "countFiles": "Файли: {{n}}",
+    "bothHint": "Файли з жорсткими посиланнями лишаються на диску, доки не зникнуть обидві копії. Увімкніть обидва параметри, щоб звільнити ще {{size}}.",
+    "kindTorrent": "Торрент",
+    "kindFile": "Файл",
+    "whatHappens": "Що буде зроблено",
+    "freesColumn": "Звільнить",
+    "doneTitle": "Видалення завершено",
+    "doneDescription": "Усі дії завершено.",
+    "partialTitle": "Деякі дії не вдалися",
+    "partialDescription": "Невдалі дії позначено нижче. Спробуйте пізніше або завершіть їх у qBittorrent, Sonarr чи Radarr."
   },
   "actionStatus": {
     "planned": "Заплановано",

@@ -6,7 +6,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatBytes } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
-import { useTranslation } from "react-i18next"
+import { Trans, useTranslation } from "react-i18next"
 
 import { DISK_SEGMENT_COLORS } from "../lib/colors"
 import { DISK_SEGMENT_KEYS, diskBreakdown, type DiskSegmentKey } from "../lib/disk"
@@ -37,26 +37,40 @@ export function SpaceDiskBar() {
   }
 
   const disk = diskBreakdown(data)
-  const summary = t("disk.summary", {
-    tracked: formatBytes(data.totals.trackedBytes),
-    free: formatBytes(disk?.freeBytes ?? 0),
-    reclaimable: formatBytes(data.totals.reclaimableBytes),
-  })
+  const headline = (
+    <div className="text-4xl font-semibold leading-none tracking-tight tabular-nums">
+      <Trans
+        t={t}
+        i18nKey="disk.headline"
+        values={{ size: formatBytes(data.totals.reclaimableBytes) }}
+        components={{ muted: <span className="ml-1.5 text-base font-medium tracking-normal text-muted-foreground" /> }}
+      />
+    </div>
+  )
 
-  if (!disk) {
-    return <p className="text-sm text-muted-foreground">{summary}</p>
-  }
+  if (!disk) return headline
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3.5">
+      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
+        {headline}
+        <span className="min-w-0 text-sm text-muted-foreground tabular-nums" title={disk.paths.join(", ")}>
+          <Trans
+            t={t}
+            i18nKey="disk.usage"
+            values={{ used: formatBytes(disk.usedBytes), total: formatBytes(disk.totalBytes), free: formatBytes(disk.freeBytes) }}
+            components={{ strong: <span className="font-medium text-foreground" /> }}
+          />
+        </span>
+      </div>
       <div
-        className="flex h-4 w-full overflow-hidden rounded-full bg-muted"
+        className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
         role="img"
         aria-label={t("disk.ariaLabel", { used: formatBytes(disk.usedBytes), total: formatBytes(disk.totalBytes) })}
       >
         {DISK_SEGMENT_KEYS.map(key => {
           const bytes = disk.segments[key]
-          if (bytes <= 0 || disk.totalBytes <= 0) return null
+          if (bytes <= 0 || disk.totalBytes <= 0 || key === "free") return null
           return (
             <Tooltip key={key}>
               <TooltipTrigger asChild>
@@ -70,19 +84,14 @@ export function SpaceDiskBar() {
           )
         })}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground tabular-nums">
         {DISK_SEGMENT_KEYS.map(key => (
           <span key={key} className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm border border-border/50" style={{ background: DISK_SEGMENT_COLORS[key] }} />
+            <span className="h-2 w-2 rounded-[2px] border border-border/50" style={{ background: DISK_SEGMENT_COLORS[key] }} />
             {t(SEGMENT_LABEL_KEYS[key])}
+            <span className="font-medium text-foreground">{formatBytes(disk.segments[key])}</span>
           </span>
         ))}
-      </div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-        <span>{summary}</span>
-        <span className="truncate font-mono text-xs text-muted-foreground" title={disk.paths.join("\n")}>
-          {disk.paths.join(" · ")}
-        </span>
       </div>
     </div>
   )

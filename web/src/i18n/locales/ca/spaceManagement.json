@@ -19,9 +19,10 @@
       "free": "Lliure"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} seguits · {{free}} lliures · {{reclaimable}} recuperables",
     "ariaLabel": "Ús del disc: {{used}} en ús de {{total}}",
-    "loadError": "No s’ha pogut carregar l’ús del disc: {{error}}"
+    "loadError": "No s’ha pogut carregar l’ús del disc: {{error}}",
+    "headline": "{{size}} <muted>es poden alliberar</muted>",
+    "usage": "<strong>{{used}}</strong> en ús de {{total}} · <strong>{{free}}</strong> lliures"
   },
   "filters": {
     "quickLabel": "Filtres ràpids",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Títol",
-    "space": "Espai (la part plena s’allibera en eliminar)",
     "size": "Mida",
     "seeding": "Compartició",
-    "barTooltip": "Allibera {{reclaimable}} de {{size}}",
     "expand": "Desplega",
-    "collapse": "Plega"
+    "collapse": "Plega",
+    "frees": "S’allibera en eliminar",
+    "keptBySeeding": "Retingut per la compartició",
+    "idleFor": "Inactiu {{time}}"
   },
   "treemap": {
     "breadcrumb": "Nivell del mapa",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Biblioteca",
     "orphans": "Orfes",
-    "summary": "Elements: {{items}} · {{size}}"
+    "label": "Grups d’elements"
   },
   "reclaimable": {
     "unknown": "Desconegut",
@@ -110,9 +112,9 @@
     "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Seleccionats: {{items}} · {{size}}",
     "selectAll": "Selecciona tots els elements visibles",
-    "selectRow": "Selecciona {{title}}"
+    "selectRow": "Selecciona {{title}}",
+    "frees": "Seleccionats: {{items}} · allibera {{size}}"
   },
   "status": {
     "loadError": "No s’ha pogut carregar l’arbre de l’espai: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Tria almenys una opció.",
     "planning": "Planificant…",
     "planError": "No s’ha pogut planificar l’eliminació: {{error}}",
-    "reclaimable": "Espai alliberat: {{size}}",
     "noActions": "No hi ha res a eliminar amb aquestes opcions.",
-    "plannedActions": "Accions previstes",
     "results": "Resultats",
     "confirm": "Elimina",
     "deleting": "Eliminant…",
     "cancel": "Cancel·la",
     "close": "Tanca",
-    "executeError": "No s’ha pogut eliminar: {{error}}"
+    "executeError": "No s’ha pogut eliminar: {{error}}",
+    "frees": "Allibera {{size}}",
+    "freed": "S’han alliberat {{size}}",
+    "ofSelected": "de {{size}} seleccionats",
+    "countTorrents": "Torrents: {{n}}",
+    "countCrossSeeds": "Cross-seeds: {{n}}",
+    "countFiles": "Fitxers: {{n}}",
+    "bothHint": "Els fitxers amb enllaços durs es queden al disc fins que no se n’eliminen les dues còpies. Activa les dues opcions per alliberar {{size}} més.",
+    "kindTorrent": "Torrent",
+    "kindFile": "Fitxer",
+    "whatHappens": "Què passarà",
+    "freesColumn": "Allibera",
+    "doneTitle": "Eliminació acabada",
+    "doneDescription": "Totes les accions han acabat.",
+    "partialTitle": "Algunes accions han fallat",
+    "partialDescription": "Les accions fallides es marquen a sota. Torna-ho a provar més tard, o acaba-les a qBittorrent, Sonarr o Radarr."
   },
   "actionStatus": {
     "planned": "Previst",

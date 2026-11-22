@@ -19,9 +19,10 @@
       "free": "Volno"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} sledováno · {{free}} volno · {{reclaimable}} uvolnitelné",
     "ariaLabel": "Využití disku: {{used}} z {{total}}",
-    "loadError": "Využití disku se nepodařilo načíst: {{error}}"
+    "loadError": "Využití disku se nepodařilo načíst: {{error}}",
+    "headline": "{{size}} <muted>lze uvolnit</muted>",
+    "usage": "<strong>{{used}}</strong> využito z {{total}} · <strong>{{free}}</strong> volno"
   },
   "filters": {
     "quickLabel": "Rychlé filtry",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Název",
-    "space": "Místo (plná část se smazáním uvolní)",
     "size": "Velikost",
     "seeding": "Seedování",
-    "barTooltip": "Uvolní {{reclaimable}} z {{size}}",
     "expand": "Rozbalit",
-    "collapse": "Sbalit"
+    "collapse": "Sbalit",
+    "frees": "Uvolní smazání",
+    "keptBySeeding": "Drží seedování",
+    "idleFor": "Nečinné {{time}}"
   },
   "treemap": {
     "breadcrumb": "Úroveň mapy",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Knihovna",
     "orphans": "Osiřelé",
-    "summary": "Položky: {{items}} · {{size}}"
+    "label": "Skupiny položek"
   },
   "reclaimable": {
     "unknown": "Neznámé",
@@ -110,9 +112,9 @@
     "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Vybráno: {{items}} · {{size}}",
     "selectAll": "Vybrat všechny viditelné položky",
-    "selectRow": "Vybrat {{title}}"
+    "selectRow": "Vybrat {{title}}",
+    "frees": "Vybráno: {{items}} · uvolní {{size}}"
   },
   "status": {
     "loadError": "Strom místa se nepodařilo načíst: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Zvolte alespoň jednu možnost.",
     "planning": "Plánování…",
     "planError": "Smazání se nepodařilo naplánovat: {{error}}",
-    "reclaimable": "Uvolněné místo: {{size}}",
     "noActions": "S těmito možnostmi není co smazat.",
-    "plannedActions": "Plánované akce",
     "results": "Výsledky",
     "confirm": "Smazat",
     "deleting": "Mazání…",
     "cancel": "Zrušit",
     "close": "Zavřít",
-    "executeError": "Smazání se nezdařilo: {{error}}"
+    "executeError": "Smazání se nezdařilo: {{error}}",
+    "frees": "Uvolní {{size}}",
+    "freed": "Uvolněno {{size}}",
+    "ofSelected": "z vybraných {{size}}",
+    "countTorrents": "Torrenty: {{n}}",
+    "countCrossSeeds": "Cross-seedy: {{n}}",
+    "countFiles": "Soubory: {{n}}",
+    "bothHint": "Soubory s pevnými odkazy zůstanou na disku, dokud nezmizí obě kopie. Zapněte obě volby a uvolníte o {{size}} víc.",
+    "kindTorrent": "Torrent",
+    "kindFile": "Soubor",
+    "whatHappens": "Co se stane",
+    "freesColumn": "Uvolní",
+    "doneTitle": "Mazání dokončeno",
+    "doneDescription": "Všechny akce skončily.",
+    "partialTitle": "Některé akce selhaly",
+    "partialDescription": "Neúspěšné akce jsou označené níže. Zkuste to později znovu, nebo je dokončete v qBittorrentu, Sonarru nebo Radarru."
   },
   "actionStatus": {
     "planned": "Naplánováno",

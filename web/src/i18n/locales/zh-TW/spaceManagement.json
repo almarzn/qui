@@ -19,9 +19,10 @@
       "free": "可用"
     },
     "segmentTooltip": "{{label}}：{{size}}",
-    "summary": "已追蹤 {{tracked}} · 可用 {{free}} · 可釋放 {{reclaimable}}",
     "ariaLabel": "磁碟使用量：已用 {{used}}，共 {{total}}",
-    "loadError": "無法載入磁碟使用量：{{error}}"
+    "loadError": "無法載入磁碟使用量：{{error}}",
+    "headline": "{{size}} <muted>可釋放</muted>",
+    "usage": "已用 <strong>{{used}}</strong>，共 {{total}} · 可用 <strong>{{free}}</strong>"
   },
   "filters": {
     "quickLabel": "快速篩選",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "標題",
-    "space": "空間（實色部分刪除後釋放）",
     "size": "大小",
     "seeding": "做種",
-    "barTooltip": "釋放 {{reclaimable}}，共 {{size}}",
     "expand": "展開",
-    "collapse": "收合"
+    "collapse": "收合",
+    "frees": "刪除後釋放",
+    "keptBySeeding": "因做種保留",
+    "idleFor": "閒置 {{time}}"
   },
   "treemap": {
     "breadcrumb": "樹狀圖層級",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "媒體庫",
     "orphans": "孤立項目",
-    "summary": "項目：{{items}} · {{size}}"
+    "label": "項目分組"
   },
   "reclaimable": {
     "unknown": "未知",
@@ -110,9 +112,9 @@
     "crossSeed": "輔種"
   },
   "selection": {
-    "summary": "已選取：{{items}} · {{size}}",
     "selectAll": "選取所有可見項目",
-    "selectRow": "選取 {{title}}"
+    "selectRow": "選取 {{title}}",
+    "frees": "已選：{{items}} · 釋放 {{size}}"
   },
   "status": {
     "loadError": "無法載入空間樹：{{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "請至少選擇一個選項。",
     "planning": "正在規劃…",
     "planError": "無法規劃刪除：{{error}}",
-    "reclaimable": "釋放空間：{{size}}",
     "noActions": "使用這些選項沒有可刪除的內容。",
-    "plannedActions": "計畫的操作",
     "results": "結果",
     "confirm": "刪除",
     "deleting": "正在刪除…",
     "cancel": "取消",
     "close": "關閉",
-    "executeError": "刪除失敗：{{error}}"
+    "executeError": "刪除失敗：{{error}}",
+    "frees": "釋放 {{size}}",
+    "freed": "已釋放 {{size}}",
+    "ofSelected": "已選 {{size}}",
+    "countTorrents": "種子：{{n}}",
+    "countCrossSeeds": "輔種：{{n}}",
+    "countFiles": "檔案：{{n}}",
+    "bothHint": "硬連結的檔案在兩份副本都刪除前會留在磁碟上。同時開啟兩個選項可再釋放 {{size}}。",
+    "kindTorrent": "種子",
+    "kindFile": "檔案",
+    "whatHappens": "將執行的動作",
+    "freesColumn": "釋放",
+    "doneTitle": "刪除完成",
+    "doneDescription": "所有動作均已完成。",
+    "partialTitle": "部分動作失敗",
+    "partialDescription": "失敗的動作已在下方標出。請稍後再試，或在 qBittorrent、Sonarr 或 Radarr 中完成。"
   },
   "actionStatus": {
     "planned": "已計畫",

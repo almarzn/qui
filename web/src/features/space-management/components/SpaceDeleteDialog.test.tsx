@@ -73,14 +73,12 @@ describe("SpaceDeleteDialog", () => {
 
     const { onDeleted } = renderDialog()
 
-    await screen.findByText("Planned actions")
+    await screen.findByText("What happens")
     expect(screen.getByRole("heading", { name: "Harbor of Glass" })).not.toBeNull()
     expect(screen.getByText("qbit: Harbor.of.Glass.2019.1080p-GRP")).not.toBeNull()
     expect(screen.getByText("Cross-seed")).not.toBeNull()
     expect(screen.getByText("tracker.example")).not.toBeNull()
-    // Library files show the file name; the path sits in a tooltip.
-    expect(screen.getByText("movie.mkv")).not.toBeNull()
-    expect(screen.queryByText("/media/movies/Harbor of Glass (2019)/movie.mkv")).toBeNull()
+    expect(screen.getByText("/media/movies/Harbor of Glass (2019)/movie.mkv")).not.toBeNull()
     expect(requests).toEqual([{
       nodeIds: [movie.id],
       deleteTorrents: true,

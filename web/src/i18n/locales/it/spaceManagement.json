@@ -19,9 +19,10 @@
       "free": "Libero"
     },
     "segmentTooltip": "{{label}}: {{size}}",
-    "summary": "{{tracked}} monitorati · {{free}} liberi · {{reclaimable}} recuperabili",
     "ariaLabel": "Uso del disco: {{used}} usati su {{total}}",
-    "loadError": "Impossibile caricare l’uso del disco: {{error}}"
+    "loadError": "Impossibile caricare l’uso del disco: {{error}}",
+    "headline": "{{size}} <muted>liberabili</muted>",
+    "usage": "<strong>{{used}}</strong> usati su {{total}} · <strong>{{free}}</strong> liberi"
   },
   "filters": {
     "quickLabel": "Filtri rapidi",
@@ -49,12 +50,13 @@
   },
   "list": {
     "title": "Titolo",
-    "space": "Spazio (la parte piena viene liberata eliminando)",
     "size": "Dimensione",
     "seeding": "Seed",
-    "barTooltip": "Libera {{reclaimable}} su {{size}}",
     "expand": "Espandi",
-    "collapse": "Comprimi"
+    "collapse": "Comprimi",
+    "frees": "Liberato eliminando",
+    "keptBySeeding": "Tenuto dal seeding",
+    "idleFor": "Inattivo {{time}}"
   },
   "treemap": {
     "breadcrumb": "Livello della mappa",
@@ -67,7 +69,7 @@
   "sections": {
     "library": "Libreria",
     "orphans": "Orfani",
-    "summary": "Elementi: {{items}} · {{size}}"
+    "label": "Gruppi di elementi"
   },
   "reclaimable": {
     "unknown": "Sconosciuto",
@@ -110,9 +112,9 @@
     "crossSeed": "Cross-seed"
   },
   "selection": {
-    "summary": "Selezionati: {{items}} · {{size}}",
     "selectAll": "Seleziona tutti gli elementi visibili",
-    "selectRow": "Seleziona {{title}}"
+    "selectRow": "Seleziona {{title}}",
+    "frees": "Selezionati: {{items}} · libera {{size}}"
   },
   "status": {
     "loadError": "Impossibile caricare l’albero dello spazio: {{error}}",
@@ -130,15 +132,28 @@
     "chooseOption": "Scegli almeno un’opzione.",
     "planning": "Pianificazione…",
     "planError": "Impossibile pianificare l’eliminazione: {{error}}",
-    "reclaimable": "Spazio liberato: {{size}}",
     "noActions": "Niente da eliminare con queste opzioni.",
-    "plannedActions": "Azioni previste",
     "results": "Risultati",
     "confirm": "Elimina",
     "deleting": "Eliminazione…",
     "cancel": "Annulla",
     "close": "Chiudi",
-    "executeError": "Eliminazione non riuscita: {{error}}"
+    "executeError": "Eliminazione non riuscita: {{error}}",
+    "frees": "Libera {{size}}",
+    "freed": "Liberati {{size}}",
+    "ofSelected": "di {{size}} selezionati",
+    "countTorrents": "Torrent: {{n}}",
+    "countCrossSeeds": "Cross-seed: {{n}}",
+    "countFiles": "File: {{n}}",
+    "bothHint": "I file con hardlink restano sul disco finché non spariscono entrambe le copie. Attiva entrambe le opzioni per liberare altri {{size}}.",
+    "kindTorrent": "Torrent",
+    "kindFile": "File",
+    "whatHappens": "Cosa succede",
+    "freesColumn": "Libera",
+    "doneTitle": "Eliminazione completata",
+    "doneDescription": "Tutte le azioni sono terminate.",
+    "partialTitle": "Alcune azioni non sono riuscite",
+    "partialDescription": "Le azioni non riuscite sono segnate qui sotto. Riprova più tardi, o completale in qBittorrent, Sonarr o Radarr."
   },
   "actionStatus": {
     "planned": "Previsto",

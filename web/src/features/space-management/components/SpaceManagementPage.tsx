@@ -15,11 +15,12 @@ import { toast } from "sonner"
 import {
   EMPTY_FILTER_INPUTS,
   filterTree,
-  flattenTree,
+  flattenNodes,
   hasActiveFilters,
   nodesCheckState,
   parseFilterInputs,
   partitionNodes,
+  quickFilterCounts,
   sortTree,
   toggleNodes,
   visibleSelection,
@@ -53,9 +54,9 @@ export function SpaceManagementPage() {
 
   const [view, setView] = useState<SpaceView>("list")
   const [filterInputs, setFilterInputs] = useState<SpaceFilterInputs>(EMPTY_FILTER_INPUTS)
-  const [sort, setSort] = useState<SpaceSort>({ key: "size", direction: "desc" })
+  const [sort, setSort] = useState<SpaceSort>({ key: "reclaimable", direction: "desc" })
+  const [section, setSection] = useState<SpaceSection>("library")
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
-  const [collapsedSections, setCollapsedSections] = useState<ReadonlySet<SpaceSection>>(() => new Set())
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
   const [detailsNode, setDetailsNode] = useState<SpaceNode | null>(null)
   const [deleteNodes, setDeleteNodes] = useState<SpaceNode[] | null>(null)
@@ -71,14 +72,17 @@ export function SpaceManagementPage() {
     [allNodes, filters, nowMs, sort]
   )
   const sections = useMemo(() => partitionNodes(visibleRoots), [visibleRoots])
-  const rows = useMemo(() => flattenTree(sections, expanded, collapsedSections), [sections, expanded, collapsedSections])
-  const maxBytes = useMemo(() => visibleRoots.reduce((max, node) => Math.max(max, node.sizeBytes), 0), [visibleRoots])
-  const openRoots = useMemo(
-    () => (["library", "orphans"] as const).flatMap(section => collapsedSections.has(section) ? [] : sections[section]),
-    [sections, collapsedSections]
+  const allSections = useMemo(() => partitionNodes(allNodes), [allNodes])
+  const tabRoots = sections[section]
+  const rows = useMemo(() => flattenNodes(tabRoots, expanded), [tabRoots, expanded])
+  const maxReclaimableBytes = useMemo(() => tabRoots.reduce((max, node) => Math.max(max, node.reclaimableBytes), 0), [tabRoots])
+  const sectionCounts = useMemo(() => ({ library: sections.library.length, orphans: sections.orphans.length }), [sections])
+  const quickCounts = useMemo(
+    () => quickFilterCounts(allSections[section], deferredInputs, nowMs),
+    [allSections, section, deferredInputs, nowMs]
   )
-  const selection = useMemo(() => visibleSelection(visibleRoots, selected), [visibleRoots, selected])
-  const selectionSize = useMemo(() => selection.reduce((sum, node) => sum + node.sizeBytes, 0), [selection])
+  const selection = useMemo(() => visibleSelection(tabRoots, selected), [tabRoots, selected])
+  const selectionFrees = useMemo(() => selection.reduce((sum, node) => sum + node.reclaimableBytes, 0), [selection])
 
   const handleToggleSelect = useCallback((node: SpaceNode) => {
     setSelected(prev => toggleNodes(prev, [node]))
@@ -86,12 +90,9 @@ export function SpaceManagementPage() {
   const handleToggleExpand = useCallback((id: string) => {
     setExpanded(prev => toggleInSet(prev, id))
   }, [])
-  const handleToggleSection = useCallback((section: SpaceSection) => {
-    setCollapsedSections(prev => toggleInSet(prev, section))
-  }, [])
   const handleToggleAll = useCallback(() => {
-    setSelected(prev => toggleNodes(prev, openRoots))
-  }, [openRoots])
+    setSelected(prev => toggleNodes(prev, tabRoots))
+  }, [tabRoots])
 
   const handleRefresh = () => {
     refresh.mutate(undefined, {
@@ -113,13 +114,13 @@ export function SpaceManagementPage() {
     if (allNodes.length === 0) {
       return <p className="py-8 text-center text-sm text-muted-foreground">{t("status.empty")}</p>
     }
-    if (visibleRoots.length === 0 && hasActiveFilters(filters)) {
+    if (tabRoots.length === 0 && hasActiveFilters(filters)) {
       return <p className="py-8 text-center text-sm text-muted-foreground">{t("status.noMatches")}</p>
     }
     if (view === "treemap") {
       return (
         <SpaceTreemapView
-          roots={visibleRoots}
+          roots={tabRoots}
           nowMs={nowMs}
           selected={selected}
           onToggleSelect={handleToggleSelect}
@@ -130,14 +131,13 @@ export function SpaceManagementPage() {
     return (
       <SpaceListView
         rows={rows}
-        maxBytes={maxBytes}
+        maxReclaimableBytes={maxReclaimableBytes}
         nowMs={nowMs}
         selected={selected}
-        allCheckState={nodesCheckState(openRoots, selected)}
+        allCheckState={nodesCheckState(tabRoots, selected)}
         onToggleAll={handleToggleAll}
         onToggleSelect={handleToggleSelect}
         onToggleExpand={handleToggleExpand}
-        onToggleSection={handleToggleSection}
         onOpen={setDetailsNode}
       />
     )
@@ -158,6 +158,10 @@ export function SpaceManagementPage() {
       <SpaceDiskBar />
 
       <SpaceFiltersBar
+        section={section}
+        onSectionChange={setSection}
+        sectionCounts={sectionCounts}
+        quickCounts={quickCounts}
         inputs={filterInputs}
         onInputsChange={setFilterInputs}
         sort={sort}
@@ -166,29 +170,30 @@ export function SpaceManagementPage() {
         onViewChange={setView}
       />
 
-      {(selection.length > 0 || tree.data?.generatedAt) && (
-        <div className="flex min-h-8 flex-wrap items-center gap-3 text-sm">
-          {selection.length > 0 && (
-            <>
-              <span>{t("selection.summary", { items: selection.length, size: formatBytes(selectionSize) })}</span>
-              <Button variant="destructive" size="sm" onClick={() => setDeleteNodes(selection)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("actions.delete")}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-                {t("actions.clearSelection")}
-              </Button>
-            </>
-          )}
-          {tree.data?.generatedAt && (
-            <span className="ml-auto text-xs text-muted-foreground">
-              {t("status.generatedAt", { time: formatISOTimestamp(tree.data.generatedAt) })}
-            </span>
-          )}
-        </div>
+      {renderItems()}
+
+      {tree.data?.generatedAt && (
+        <p className="text-xs text-muted-foreground">
+          {t("status.generatedAt", { time: formatISOTimestamp(tree.data.generatedAt) })}
+        </p>
       )}
 
-      {renderItems()}
+      {selection.length > 0 && (
+        <div className="sticky bottom-4 z-30 flex justify-center">
+          <div className="flex w-full max-w-xl items-center gap-3 rounded-xl bg-primary py-2 pl-4 pr-2 text-sm text-primary-foreground shadow-lg">
+            <span className="min-w-0 flex-1 truncate tabular-nums">
+              {t("selection.frees", { items: selection.length, size: formatBytes(selectionFrees) })}
+            </span>
+            <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => setSelected(new Set())}>
+              {t("actions.clearSelection")}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteNodes(selection)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("actions.delete")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <SpaceDetailsSheet node={detailsNode} nowMs={nowMs} onClose={() => setDetailsNode(null)} />
 

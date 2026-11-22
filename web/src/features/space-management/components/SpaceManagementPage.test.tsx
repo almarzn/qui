@@ -103,8 +103,8 @@ describe("SpaceManagementPage", () => {
     serve()
     renderWithClient(<SpaceManagementPage />)
 
-    await screen.findByText(`${formatBytes(321 * GiB)} tracked · ${formatBytes(400 * GiB)} free · ${formatBytes(123 * GiB)} reclaimable`)
-    expect(screen.getByText("/downloads · /media")).not.toBeNull()
+    await screen.findByText((_, element) => element?.tagName === "DIV" && element.textContent === `${formatBytes(123 * GiB)} can be freed`)
+    expect(screen.getByTitle("/downloads, /media")).not.toBeNull()
     expect(screen.getAllByRole("img", { name: /^Disk usage/ })).toHaveLength(1)
     // jsdom renders no virtual rows; the select-all checkbox proves the list mounted.
     await screen.findByRole("checkbox", { name: "Select all visible items" })
@@ -132,7 +132,7 @@ describe("SpaceManagementPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Treemap" }))
     fireEvent.click(screen.getByRole("button", { name: "Harbor of Glass" }), { shiftKey: true })
 
-    expect(screen.getByText(`Selected: 1 · ${formatBytes(4 * GiB)}`)).not.toBeNull()
+    expect(screen.getByText(`Selected: 1 · frees ${formatBytes(4 * GiB)}`)).not.toBeNull()
     expect(screen.queryByRole("heading", { name: "Harbor of Glass" })).toBeNull()
   })
 

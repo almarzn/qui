@@ -14,16 +14,17 @@ import {
   EMPTY_FILTER_INPUTS,
   EMPTY_SPACE_FILTERS,
   filterTree,
-  flattenTree,
+  flattenNodes,
   formatDurationShort,
   nodeCheckState,
   nodesCheckState,
   parseFilterInputs,
   parseFilterNumber,
   partitionNodes,
+  quickFilterCounts,
   reclaimableDisplay,
+  reclaimablePct,
   seedingState,
-  sizeBar,
   sortTree,
   toggleNodes,
   visibleSelection,
@@ -179,32 +180,37 @@ describe("sortTree", () => {
   })
 })
 
-describe("flattenTree", () => {
-  const sections = partitionNodes([series, movie, orphan])
-
-  it("emits section rows and hides collapsed series children", () => {
-    const rows = flattenTree(sections, new Set(), new Set())
-    expect(rows.map(r => r.id)).toEqual(["section:library", "series", "movie", "section:orphans", "orphan"])
+describe("flattenNodes", () => {
+  it("hides the seasons of a collapsed series", () => {
+    expect(flattenNodes([series, movie], new Set()).map(r => r.id)).toEqual(["series", "movie"])
   })
 
   it("shows seasons of an expanded series one level deeper and ignores expanded leaves", () => {
-    const rows = flattenTree(sections, new Set(["series", "movie"]), new Set())
-    expect(rows.map(r => r.id)).toEqual(["section:library", "series", "s1", "s2", "movie", "section:orphans", "orphan"])
-    const movieRow = rows[4]
-    expect(movieRow.type === "node" && movieRow.expanded).toBe(false)
-  })
-
-  it("hides the nodes of a collapsed section", () => {
-    expect(flattenTree(sections, new Set(), new Set(["orphans"])).map(r => r.id))
-      .toEqual(["section:library", "series", "movie", "section:orphans"])
+    const rows = flattenNodes([series, movie], new Set(["series", "movie"]))
+    expect(rows.map(r => r.id)).toEqual(["series", "s1", "s2", "movie"])
+    expect(rows[1].depth).toBe(1)
+    expect(rows[3].expanded).toBe(false)
   })
 })
 
-describe("sizeBar", () => {
-  it("sizes the bar to the largest item and the solid part to the reclaimable bytes", () => {
-    expect(sizeBar(movie, 1000)).toEqual({ totalPct: 50, reclaimablePct: 10 })
-    expect(sizeBar(movie, 0)).toEqual({ totalPct: 0, reclaimablePct: 0 })
-    expect(sizeBar(node("big", { sizeBytes: 10, reclaimableBytes: 50 }), 10)).toEqual({ totalPct: 100, reclaimablePct: 100 })
+describe("partitionNodes", () => {
+  it("puts orphans in their own tab", () => {
+    expect(partitionNodes([series, orphan, movie])).toEqual({ library: [series, movie], orphans: [orphan] })
+  })
+})
+
+describe("reclaimablePct", () => {
+  it("sizes the meter to the item that frees the most", () => {
+    expect(reclaimablePct(movie, 400)).toBe(25)
+    expect(reclaimablePct(movie, 0)).toBe(0)
+    expect(reclaimablePct(node("big", { reclaimableBytes: 50 }), 10)).toBe(100)
+  })
+})
+
+describe("quickFilterCounts", () => {
+  it("counts the nodes each quick filter shows and keeps the search", () => {
+    const counts = quickFilterCounts([series, movie], { ...EMPTY_FILTER_INPUTS, search: "harbor" }, NOW)
+    expect(counts.all).toBe(1)
   })
 })
 
