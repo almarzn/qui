@@ -18,6 +18,7 @@ import (
 
 	"github.com/autobrr/qui/internal/fsops"
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 )
 
 type fakeArrStore struct{ instances []*models.ArrInstance }
@@ -50,9 +51,9 @@ func (f *fakeTorrents) GetTorrentFilesBatch(context.Context, int, []string) (map
 	return f.files, nil
 }
 
-func (f *fakeTorrents) BulkAction(_ context.Context, id int, hashes []string, action string) error {
-	if action != "deleteWithFiles" {
-		return errors.New("unexpected action " + action)
+func (f *fakeTorrents) DeleteTorrents(_ context.Context, id int, hashes []string, deleteFiles bool, actor qbittorrent.DeleteActor) error {
+	if !deleteFiles || actor.Kind != qbittorrent.DeleteActorUser {
+		return errors.New("unexpected delete without files or by a non-user actor")
 	}
 	f.deleted[id] = append(f.deleted[id], hashes...)
 	return nil

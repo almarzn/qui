@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 )
 
 type torrentAction struct {
@@ -142,7 +143,7 @@ func (s *Service) executeTorrentDeletes(ctx context.Context, snap *snapshot, pla
 				hashes[i] = e.torrent.Hash
 			}
 		}
-		err := s.torrents.BulkAction(ctx, instanceID, hashes, "deleteWithFiles")
+		err := s.torrents.DeleteTorrents(ctx, instanceID, hashes, true, qbittorrent.DeleteActor{Kind: qbittorrent.DeleteActorUser})
 		log.Debug().Err(err).Int("instanceID", instanceID).Int("torrents", len(hashes)).Msg("space management: deleted torrents with files")
 		for _, ta := range actions {
 			setResult(&plan.resp.Actions[ta.action], err)

@@ -19,6 +19,7 @@ import (
 	"github.com/autobrr/qui/internal/fsops"
 	localbackend "github.com/autobrr/qui/internal/fsops/local"
 	"github.com/autobrr/qui/internal/models"
+	"github.com/autobrr/qui/internal/qbittorrent"
 )
 
 const (
@@ -42,7 +43,7 @@ type instanceLister interface {
 type torrentSource interface {
 	GetAllTorrentRefs(ctx context.Context, instanceID int) ([]*qbt.Torrent, error)
 	GetTorrentFilesBatch(ctx context.Context, instanceID int, hashes []string) (map[string]qbt.TorrentFiles, error)
-	BulkAction(ctx context.Context, instanceID int, hashes []string, action string) error
+	DeleteTorrents(ctx context.Context, instanceID int, hashes []string, deleteFiles bool, actor qbittorrent.DeleteActor) error
 	GetFreeSpace(ctx context.Context, instanceID int) (int64, error)
 }
 
